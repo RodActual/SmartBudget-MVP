@@ -1,1 +1,1 @@
-
+# Handles Firebase auth
