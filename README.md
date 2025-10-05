@@ -1,6 +1,7 @@
 # SmartBudget-MVP
 Student-focused personal finance dashboard that helps users track expenses, set budgets, and build healthier money habits. This project is the minimum viable prototype (MVP) of a web-based budgeting tool built with **React**, **Flask**, and **Firebase**.
-## 📊 Project Overview
+
+## Project Overview
 
 **Goal:**  
 Create an accessible, intuitive platform for students and young professionals to:
@@ -11,13 +12,13 @@ Create an accessible, intuitive platform for students and young professionals to
 
 ---
 
-## 🧠 Business Problem
+## Business Problem
 
 Many students and early-career professionals struggle with financial literacy and overspending. Existing tools (like PocketGuard and EveryDollar) are often either too complex, too expensive, or lack customization. **SmartBudget-MVP** aims to close that gap with a user-friendly tool focused on simplicity, personalization, and actionable insights.
 
 ---
 
-## 🧰 Tech Stack
+## Tech Stack
 
 | Component | Technology         | Purpose                            |
 |----------|---------------------|------------------------------------|
@@ -29,7 +30,7 @@ Many students and early-career professionals struggle with financial literacy an
 
 ---
 
-## 📆 Development Timeline
+## Development Timeline
 
 | Phase | Dates | Goals |
 |------|-------|-------|
@@ -41,15 +42,15 @@ Many students and early-career professionals struggle with financial literacy an
 
 ---
 
-## 📸 Documentation & Screenshots
+## Documentation & Screenshots
 
 All screenshots, demos, and tech evaluations are stored in the `docs/` folder.  
 Suggested screenshots to include:
-- ✅ Backend API (Postman or browser endpoint test)
-- ✅ Firebase database structure
-- ✅ UI mockup from Figma
-- ✅ Running frontend dashboard page
-- ✅ Spending chart or alert example
+- Backend API (Postman or browser endpoint test)
+- Firebase database structure
+- UI mockup from Figma
+- Running frontend dashboard page
+- Spending chart or alert example
 
 ## Future Enhancements
 
