@@ -20,25 +20,25 @@ Many students and early-career professionals struggle with financial literacy an
 
 ## Tech Stack
 
-| Component | Technology         | Purpose                            |
-|----------|---------------------|------------------------------------|
-| Frontend | React.js            | UI and interactive dashboard       |
-| Backend  | Flask (Python)      | REST API and business logic        |
-| Database | Firebase Firestore  | Real-time data storage             |
-| Design   | Figma               | UI/UX mockups and prototyping      |
-| Tools    | GitHub, VS Code     | Version control and development    |
+| Component | Technology          | Purpose                            |
+|-----------|---------------------|------------------------------------|
+| Frontend  | React.js            | UI and interactive dashboard       |
+| Backend   | Flask (Python)      | REST API and business logic        |
+| Database  | Firebase Firestore  | Real-time data storage             |
+| Design    | StoryBook           | UI/UX mockups and prototyping      |
+| Tools     | GitHub, VS Code     | Version control and development    |
 
 ---
 
 ## Development Timeline
 
-| Phase | Dates | Goals |
-|------|-------|-------|
-| **Week 1-2** | Sept 30 - Oct 5 | Learn Flask & React basics, research competitors, finalize feature list |
-| **Week 3-4** | Oct 6 - Oct 19 | Build database schema, design UI mockups, set up backend routes |
-| **Week 5-6** | Oct 20 - Nov 2 | Implement CRUD, basic expense tracking |
-| **Week 7-8** | Nov 3 - Nov 23 | Add automated categorization, alerts, visual charts |
-| **Week 9-10** | Nov 24 - Dec 7 | User testing, integrate real-time alerts, finalize MVP |
+| Phase         | Dates           | Goals                                                                    |
+|---------------|-----------------|--------------------------------------------------------------------------|
+| **Week 1-2**  | Sept 30 - Oct 5 | Learn Flask & React basics, research competitors, finalize feature list  |
+| **Week 3-4**  | Oct 6 - Oct 19  | Build database schema, design UI mockups, set up backend routes          |
+| **Week 5-6**  | Oct 20 - Nov 2  | Implement CRUD, basic expense tracking                                   |
+| **Week 7-8**  | Nov 3 - Nov 23  | Add automated categorization, alerts, visual charts                      |
+| **Week 9-10** | Nov 24 - Dec 7  | User testing, integrate real-time alerts, finalize MVP                   |
 
 ---
 
@@ -48,7 +48,7 @@ All screenshots, demos, and tech evaluations are stored in the `docs/` folder.
 Suggested screenshots to include:
 - Backend API (Postman or browser endpoint test)
 - Firebase database structure
-- UI mockup from Figma
+- UI mockup from StoryBook
 - Running frontend dashboard page
 - Spending chart or alert example
 
