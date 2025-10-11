@@ -20,8 +20,6 @@ def create_app():
 
     # CORS configuration to allow the React front-end (running on a different port)
     # to communicate with the Flask API.
-    # NOTE: You would typically install the flask-cors extension for production use,
-    # but for a basic MVP, we can set minimal CORS headers manually or install it later.
     @app.after_request
     def add_cors_headers(response):
         # Allow requests from the Storybook/React development server (e.g., http://localhost:3000)
