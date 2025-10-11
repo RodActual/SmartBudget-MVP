@@ -7,7 +7,7 @@ from flask import Flask, jsonify
 # Blueprints are used to organize routes and code into separate modules.
 from routes.dashboard import dashboard_bp
 from routes.expenses_routes import expenses_bp # CORRECTED: Import from the new file name (expenses_routes)
-from routes.auth import auth_bp
+from routes.auth_routes import auth_bp # UPDATED: Changed import to auth_routes.py
 
 def create_app():
     # Initialize the Flask application
