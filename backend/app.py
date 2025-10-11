@@ -6,7 +6,7 @@ from flask import Flask, jsonify
 # 1. Import Blueprints
 # Blueprints are used to organize routes and code into separate modules.
 from routes.dashboard import dashboard_bp
-from routes.transactions import transactions_bp
+from routes.expenses_routes import expenses_bp # CORRECTED: Import from the new file name (expenses_routes)
 from routes.auth import auth_bp
 
 def create_app():
@@ -34,7 +34,7 @@ def create_app():
     # The 'url_prefix' ensures all routes in that blueprint start with the given path.
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(dashboard_bp, url_prefix='/api/dashboard')
-    app.register_blueprint(transactions_bp, url_prefix='/api/transactions')
+    app.register_blueprint(expenses_bp, url_prefix='/api/expenses') # CORRECTED: Register the new expenses_bp
 
     # --- Base Route ---
     @app.route('/')
