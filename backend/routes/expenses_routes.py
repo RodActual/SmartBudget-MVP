@@ -1,62 +1,83 @@
-# routes/expenses_routes.py
-# Blueprint for handling expense and transaction CRUD operations.
-
+import json
+from uuid import uuid4
 from flask import Blueprint, jsonify, request
+from utils.firebase_service import get_db
 
-# Create a Blueprint instance
+# Initialize the Blueprint
 expenses_bp = Blueprint('expenses', __name__)
 
-# Mock list to simulate an in-memory database for tracking IDs
-mock_expenses_data = [
-    {"id": 101, "date": "2025-10-10", "amount": 45.00, "description": "Groceries at Kroger", "category": "Food"},
-    {"id": 102, "date": "2025-10-09", "amount": 20.00, "description": "Gas Station", "category": "Gas"},
-    {"id": 103, "date": "2025-10-08", "amount": 150.00, "description": "Dinner with friends", "category": "Entertainment"},
-    {"id": 104, "date": "2025-10-07", "amount": 95.00, "description": "New shirt", "category": "Shopping"},
-]
-next_id = 105
+# --- Helper Functions ---
+
+def convert_mock_to_list(collection_dict):
+    """Converts the dictionary-based mock 'collection' into a list of items with their IDs."""
+    data_list = []
+    for doc_id, data in collection_dict.items():
+        # Add the document ID (key in the dictionary) as 'id' field
+        data_list.append({"id": doc_id, **data})
+    return data_list
+
+# --- Routes ---
 
 @expenses_bp.route('/', methods=['GET'])
 def get_expenses():
     """
-    GET /api/expenses
-    Retrieves a list of all sample expenses.
-    (In the MVP, this data would come from Firebase/Firestore.)
+    Retrieves all expenses from the database (mock or real).
     """
-    # Return the mock data list as JSON
-    return jsonify({"expenses": mock_expenses_data})
+    db = get_db()
+
+    if isinstance(db, dict):
+        # MOCK DB: Retrieve data from the 'expenses' key
+        expenses_data = db.get("expenses", {})
+        expenses_list = convert_mock_to_list(expenses_data)
+        
+        # Log to show the data being returned
+        print(f"MOCK DB: Returning {len(expenses_list)} expenses.")
+        
+        return jsonify(expenses_list)
+    else:
+        # REAL DB (Placeholder for future implementation)
+        # In a real Firestore app, you'd use db.collection('expenses').stream()
+        return jsonify({"message": "Real Firestore read not yet implemented.", "status": "pending"}), 501
+
 
 @expenses_bp.route('/', methods=['POST'])
 def add_expense():
     """
-    POST /api/expenses
-    Accepts new expense data (JSON), assigns an ID, logs the item, and returns it.
+    Accepts a new expense via JSON, validates it, and adds it to the database.
     """
-    global next_id
+    db = get_db()
     
-    # 1. Get JSON data from the request body
     try:
         data = request.get_json()
-    except Exception as e:
-        # Handle case where request body is not valid JSON
-        return jsonify({"error": "Invalid JSON format."}), 400
+    except Exception:
+        return jsonify({"error": "Invalid JSON payload"}), 400
 
-    if not data:
-        return jsonify({"error": "No data provided in the request."}), 400
-
-    # 2. Assign a mock ID and add a timestamp for simulation
-    new_expense = data.copy()
-    new_expense['id'] = next_id
-    new_expense['timestamp'] = '2025-10-11T16:27:00Z' # Mock current time
+    if not data or 'amount' not in data or 'description' not in data:
+        return jsonify({"error": "Missing required fields (amount, description)"}), 400
     
-    # 3. Log the received and created item to the console
-    print("\n--- RECEIVED NEW EXPENSE ---")
-    print(f"Data received from client: {data}")
-    print(f"Created expense object: {new_expense}")
-    print("----------------------------\n")
+    # 1. Generate a unique ID for the new document/record
+    new_expense_id = str(uuid4())
 
-    # 4. Add the new expense to the mock list (in-memory)
-    mock_expenses_data.append(new_expense)
-    next_id += 1
+    # 2. Structure the new expense document
+    new_expense_doc = {
+        "user_id": data.get("user_id", "user_id_123"), # Default to mock user
+        "amount": float(data['amount']),
+        "category_id": data.get("category_id", "cat_other"),
+        "description": data['description'],
+        "date": data.get("date", "2025-10-11"),
+    }
 
-    # 5. Return the created item with a 201 Created status
-    return jsonify({"status": "success", "expense": new_expense}), 201
+    if isinstance(db, dict):
+        # MOCK DB: Insert the new document into the 'expenses' collection
+        db['expenses'][new_expense_id] = new_expense_doc
+        
+        # Log the creation
+        print(f"MOCK DB: Created new expense with ID: {new_expense_id}")
+
+        # Return the created item including its ID
+        return jsonify({"id": new_expense_id, **new_expense_doc}), 201
+
+    else:
+        # REAL DB (Placeholder for future implementation)
+        # In a real Firestore app, you'd use db.collection('expenses').document(new_expense_id).set(new_expense_doc)
+        return jsonify({"message": "Real Firestore write not yet implemented.", "status": "pending"}), 501
