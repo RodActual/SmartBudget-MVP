@@ -1,81 +1,130 @@
-# routes/auth_routes.py
-import uuid
-import time
 from flask import Blueprint, jsonify, request
-from utils.firebase_service import get_db
+from firebase_admin import auth
+from utils.firebase_service import get_db, is_mock_db
+import time
 
-# Initialize the Blueprint
 auth_bp = Blueprint('auth', __name__)
 
-# --- Mock Token Generation ---
 def generate_mock_auth_response(user_id, username):
-    """Generates a consistent mock JWT-like response."""
+    """Mock token generation for fallback."""
     return {
         "user_id": user_id,
         "username": username,
-        "token": f"mock_jwt_token_{user_id}_{int(time.time())}", # Unique mock token
-        "expires_in": 3600 # 1 hour
+        "token": f"mock_jwt_token_{user_id}_{int(time.time())}",
+        "expires_in": 3600
     }
-
-# --- Routes ---
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
     """
-    Mocks user registration. Creates a new user entry in the mock database.
+    Register a new user with Firebase Authentication.
     """
     db = get_db()
     data = request.get_json()
 
-    # Simple validation
     if not data or 'email' not in data or 'password' not in data:
         return jsonify({"error": "Missing email or password"}), 400
 
-    new_user_id = str(uuid.uuid4())
-    username = data['email'].split('@')[0]
-    
-    # 1. Add new user to mock database
-    new_user_doc = {
-        "email": data['email'],
-        "username": username,
-        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        # NOTE: Passwords should NEVER be stored in plain text. This is a mock example.
-        "password_hash": "mock_hashed_password"
-    }
+    email = data['email']
+    password = data['password']
+    username = data.get('username', email.split('@')[0])
 
-    if isinstance(db, dict):
+    if is_mock_db():
+        # MOCK MODE
+        import uuid
+        new_user_id = str(uuid.uuid4())
+        new_user_doc = {
+            "email": email,
+            "username": username,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "password_hash": "mock_hashed_password"
+        }
         db.get('users', {})[new_user_id] = new_user_doc
-        print(f"MOCK DB: Registered new user: {username}")
-    
-    # 2. Return a successful mock token response
-    return jsonify(generate_mock_auth_response(new_user_id, username)), 201
+        print(f"MOCK DB: Registered user {username}")
+        return jsonify(generate_mock_auth_response(new_user_id, username)), 201
+    else:
+        # REAL FIREBASE
+        try:
+            # Create user in Firebase Auth
+            user = auth.create_user(
+                email=email,
+                password=password,
+                display_name=username
+            )
+            
+            # Store additional user data in Firestore
+            user_doc = {
+                "email": email,
+                "username": username,
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "uid": user.uid
+            }
+            db.collection('users').document(user.uid).set(user_doc)
+            
+            print(f"FIRESTORE: Created user {username} with UID {user.uid}")
+            
+            return jsonify({
+                "user_id": user.uid,
+                "username": username,
+                "email": email,
+                "message": "User created successfully"
+            }), 201
+            
+        except auth.EmailAlreadyExistsError:
+            return jsonify({"error": "Email already exists"}), 400
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            return jsonify({"error": str(e)}), 500
 
-
-@auth_bp.route('/login', methods=['POST'])
-def login():
+@auth_bp.route('/verify-token', methods=['POST'])
+def verify_token():
     """
-    Mocks user login. Finds a user and returns a mock token.
+    Verify a Firebase ID token sent from the frontend.
+    """
+    data = request.get_json()
+    
+    if not data or 'token' not in data:
+        return jsonify({"error": "Missing token"}), 400
+    
+    token = data['token']
+    
+    if is_mock_db():
+        # MOCK MODE - simple validation
+        if token.startswith('mock_jwt_token_'):
+            return jsonify({"valid": True, "user_id": "user_id_123"}), 200
+        return jsonify({"valid": False, "error": "Invalid token"}), 401
+    else:
+        # REAL FIREBASE
+        try:
+            decoded_token = auth.verify_id_token(token)
+            uid = decoded_token['uid']
+            
+            return jsonify({
+                "valid": True,
+                "user_id": uid,
+                "email": decoded_token.get('email')
+            }), 200
+            
+        except Exception as e:
+            return jsonify({"valid": False, "error": str(e)}), 401
+
+@auth_bp.route('/user/<user_id>', methods=['GET'])
+def get_user(user_id):
+    """
+    Get user profile information.
     """
     db = get_db()
-    data = request.get_json()
-
-    if not data or 'email' not in data or 'password' not in data:
-        return jsonify({"error": "Missing email or password"}), 400
-
-    target_email = data['email']
     
-    # 1. Mock User Lookup
-    if isinstance(db, dict):
-        users = db.get('users', {})
-        # Search mock users by email (Note: inefficient for real DB, but fine for mock)
-        for user_id, user_data in users.items():
-            if user_data.get('email') == target_email:
-                print(f"MOCK DB: Successfully logged in user: {target_email}")
-                # 2. Return mock token
-                return jsonify(generate_mock_auth_response(user_id, user_data['username'])), 200
-        
-        # If user not found in mock DB
-        return jsonify({"error": "Invalid credentials or user not found."}), 401
+    if is_mock_db():
+        user_data = db.get('users', {}).get(user_id)
+        if user_data:
+            return jsonify(user_data), 200
+        return jsonify({"error": "User not found"}), 404
     else:
-        # REAL DB (Placeholder for future implementation)
-        return jsonify({"message": "Real Firestore authentication not yet implemented.", "status": "pending"}), 501
+        try:
+            user_doc = db.collection('users').document(user_id).get()
+            if user_doc.exists:
+                return jsonify({"id": user_id, **user_doc.to_dict()}), 200
+            return jsonify({"error": "User not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500

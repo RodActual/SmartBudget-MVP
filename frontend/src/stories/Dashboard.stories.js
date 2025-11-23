@@ -1,5 +1,5 @@
 import React from 'react';
-import Dashboard from '../pages/Dashboard.js';
+import Dashboard from '../components/Dashboard';
 
 // This default export is required by Storybook
 export default {

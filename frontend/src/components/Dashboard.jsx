@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AlertBanner from "./AlertBanner.jsx";
-import Chart from "./Chart.jsx";
+import ExpenseChart from "./ExpenseChart.jsx";
 import ExpenseForm from "./ExpenseForm.jsx";
 import ExpenseList from "./ExpenseList.jsx";
 
@@ -20,7 +20,7 @@ function Dashboard() {
       <AlertBanner message={alert} type="success" />
       <ExpenseForm onAdd={handleAddExpense} />
       <ExpenseList expenses={expenses} />
-      <Chart
+      <ExpenseChart
         data={expenses.map(e => e.amount)}
         title="Expenses Overview"
       />

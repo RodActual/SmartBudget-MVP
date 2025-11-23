@@ -1,7 +1,3 @@
-// src/components/ExpenseForm.js
-// This component provides a form to add a new expense
-// REFACTORED to use the new api.js service.
-
 import React, { useState } from 'react';
 import { addExpense } from '../services/api'; // <-- IMPORTING from your new service
 

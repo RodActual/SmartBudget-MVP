@@ -1,22 +1,20 @@
-# backend/utils/firebase_service.py
-
 import os
 import logging
 from firebase_admin import credentials, initialize_app, firestore
-from google.cloud.firestore_v1.client import Client as FirestoreClient
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global variable to hold the initialized Firestore DB instance
-# This will hold either the real Firestore client or the mock dictionary
+# Global variable to hold the Firestore DB instance
 db = None
 
-# --- Mock Database Structure ---
-# This structure simulates Firestore collections and documents when keys are not set.
+# --- Mock Database Structure (fallback) ---
 MOCK_DB = {
-    # Users collection
     "users": {
         "user_id_123": {
             "email": "test@example.com",
@@ -24,7 +22,6 @@ MOCK_DB = {
             "created_at": "2025-10-01",
         }
     },
-    # Expenses collection
     "expenses": {
         "exp_001": {
             "user_id": "user_id_123",
@@ -41,13 +38,11 @@ MOCK_DB = {
             "date": "2025-10-10",
         },
     },
-    # Categories collection
     "categories": {
         "cat_food": {"name": "Food", "budget": 150},
         "cat_transport": {"name": "Transportation", "budget": 50},
         "cat_entertainment": {"name": "Entertainment", "budget": 75},
     },
-    # Budgets collection (can link to categories or be monthly totals)
     "budgets": {
         "budget_oct_2025": {
             "user_id": "user_id_123",
@@ -58,71 +53,59 @@ MOCK_DB = {
     }
 }
 
-# --- Initialization Functions ---
-
 def initialize_firebase_app():
     """
-    Initializes the Firebase Admin SDK.
-    Switches to mock mode if real keys are missing or initialization fails.
+    Initializes the Firebase Admin SDK with real credentials.
+    Falls back to mock mode if credentials are missing.
     """
     global db
 
     try:
-        # Check if the required API key is present in environment variables
-        if not os.environ.get('FIREBASE_API_KEY'):
-            raise ValueError("FIREBASE_API_KEY is missing. Switching to MOCK DB.")
+        # Check for service account path
+        service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH')
+        
+        if not service_account_path or not os.path.exists(service_account_path):
+            raise ValueError("Service account file not found. Using MOCK DB.")
 
-        # For production/real service accounts, load credentials
-        # NOTE: For security, use service accounts (JSON file path) in production
-        # For mock, we use a simple try/except structure
+        # Initialize Firebase Admin SDK
+        cred = credentials.Certificate(service_account_path)
         
-        # NOTE: Firebase Admin SDK requires credentials JSON, not just the API key.
-        # We assume project ID is set for structure. We'll proceed with minimal check.
-        
-        project_id = os.environ.get('FIREBASE_PROJECT_ID')
-        if not project_id:
-             raise ValueError("FIREBASE_PROJECT_ID is missing. Switching to MOCK DB.")
-             
-        # Attempt to initialize the app (This part often requires a Service Account JSON path,
-        # which is why it usually fails in a mock setup.)
-        
-        # If successfully initialized elsewhere (e.g., in a cloud environment), skip initialization
+        # Check if app is already initialized
         try:
-            # Try to load credentials from a generic path (might fail if run locally without path set)
-            cred = credentials.Certificate("./path/to/serviceAccountKey.json") # Placeholder path
-            initialize_app(cred, {'projectId': project_id})
+            initialize_app(cred)
             logger.info("Firebase App initialized successfully.")
-        except ValueError:
-            # If the app is already initialized, just continue
-            pass
-        except Exception:
-            # Catch file/credential loading errors and switch to mock
-            raise ValueError("Failed to load Firebase credentials. Switching to MOCK DB.")
+        except ValueError as e:
+            # App already initialized
+            logger.info("Firebase App already initialized.")
 
-
-        # Get the Firestore client
+        # Get Firestore client
         db = firestore.client()
-        logger.info("Firestore Client (REAL DB) is ready.")
+        logger.info("✅ Connected to REAL Firestore Database")
+        
+        # Test connection
+        db.collection('_test').document('_connection').set({'status': 'connected'})
+        db.collection('_test').document('_connection').delete()
+        logger.info("✅ Firestore connection test successful")
 
-    except ValueError as e:
-        logger.warning(f"Warning: {e}")
-        db = MOCK_DB
-        logger.warning("Running in MOCK DATABASE mode. Data will NOT persist.")
     except Exception as e:
-        logger.error(f"FATAL ERROR during Firebase initialization: {e}")
+        logger.warning(f"⚠️ Firebase initialization failed: {e}")
+        logger.warning("🔄 Falling back to MOCK DATABASE mode")
         db = MOCK_DB
-        logger.warning("Running in MOCK DATABASE mode. Data will NOT persist.")
 
 def get_db():
     """
-    Returns the initialized Firestore DB instance (real client or mock dict).
-    Initializes the app if it hasn't been done yet.
+    Returns the initialized Firestore DB instance (real or mock).
     """
     global db
     if db is None:
         initialize_firebase_app()
     return db
 
-# Initialize the app upon script load
-initialize_firebase_app()
+def is_mock_db():
+    """
+    Helper function to check if using mock database.
+    """
+    return isinstance(db, dict)
 
+# Initialize on module load
+initialize_firebase_app()

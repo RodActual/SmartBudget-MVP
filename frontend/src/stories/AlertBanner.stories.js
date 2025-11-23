@@ -1,4 +1,4 @@
-import AlertBanner from '@/components/AlertBanner';
+import AlertBanner from '../components/AlertBanner';
 
 export default {
   title: 'Dashboard/Alert Banner',
