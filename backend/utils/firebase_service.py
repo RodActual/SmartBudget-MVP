@@ -96,7 +96,6 @@ def get_db():
     """
     Returns the initialized Firestore DB instance (real or mock).
     """
-    global db
     if db is None:
         initialize_firebase_app()
     return db
