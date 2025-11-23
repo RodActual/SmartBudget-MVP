@@ -71,3 +71,6 @@ Thumbs.db
 *.swo
 *.bak
 *.tmp
+
+*storybook.log
+storybook-static

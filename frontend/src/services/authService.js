@@ -1,1 +1,0 @@
-# Handles login/signup requests
