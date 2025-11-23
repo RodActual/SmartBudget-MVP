@@ -11,6 +11,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
   const navigate = useNavigate();
   
   // Form state
@@ -36,6 +37,7 @@ function Dashboard() {
       ]);
       setExpenses(expensesData);
       setSummary(summaryData);
+      setError('');
     } catch (err) {
       setError('Failed to load data: ' + err.message);
       console.error(err);
@@ -58,18 +60,13 @@ function Dashboard() {
     setError('');
     
     try {
-      console.log('Adding expense:', newExpense);
-      
       const expenseData = {
         ...newExpense,
         amount: parseFloat(newExpense.amount),
         user_id: user?.uid || 'user_id_123'
       };
       
-      console.log('Sending to backend:', expenseData);
-      
-      const result = await addExpense(expenseData);
-      console.log('Expense added successfully:', result);
+      await addExpense(expenseData);
       
       // Reset form
       setNewExpense({
@@ -86,6 +83,58 @@ function Dashboard() {
       console.error('Add expense error:', err);
       setError('Failed to add expense: ' + err.message);
     }
+  };
+
+  const handleEditExpense = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    try {
+      const expenseData = {
+        ...newExpense,
+        amount: parseFloat(newExpense.amount)
+      };
+      
+      await updateExpense(editingExpense.id, expenseData);
+      
+      // Reset form
+      setNewExpense({
+        description: '',
+        amount: '',
+        category_id: 'cat_food',
+        date: new Date().toISOString().split('T')[0]
+      });
+      setEditingExpense(null);
+      setShowAddForm(false);
+      
+      // Refresh data
+      await fetchData();
+    } catch (err) {
+      console.error('Update expense error:', err);
+      setError('Failed to update expense: ' + err.message);
+    }
+  };
+
+  const startEdit = (expense) => {
+    setEditingExpense(expense);
+    setNewExpense({
+      description: expense.description,
+      amount: expense.amount.toString(),
+      category_id: expense.category_id,
+      date: expense.date
+    });
+    setShowAddForm(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingExpense(null);
+    setNewExpense({
+      description: '',
+      amount: '',
+      category_id: 'cat_food',
+      date: new Date().toISOString().split('T')[0]
+    });
+    setShowAddForm(false);
   };
 
   const handleDeleteExpense = async (expenseId) => {
@@ -128,6 +177,14 @@ function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Alert Banners */}
+        {summary && (
+          <AlertBanner 
+            alerts={summary.alerts || []} 
+            categories={summary.categories_summary || []} 
+          />
+        )}
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
@@ -187,18 +244,28 @@ function Dashboard() {
         {/* Add Expense Button */}
         <div className="mb-6">
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              if (showAddForm && !editingExpense) {
+                setShowAddForm(false);
+              } else if (editingExpense) {
+                cancelEdit();
+              } else {
+                setShowAddForm(true);
+              }
+            }}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md font-medium"
           >
-            {showAddForm ? 'Cancel' : 'Add New Expense'}
+            {editingExpense ? 'Cancel Edit' : showAddForm ? 'Cancel' : 'Add New Expense'}
           </button>
         </div>
 
-        {/* Add Expense Form */}
+        {/* Add/Edit Expense Form */}
         {showAddForm && (
           <div className="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-bold mb-4">Add New Expense</h2>
-            <form onSubmit={handleAddExpense} className="space-y-4">
+            <h2 className="text-xl font-bold mb-4">
+              {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+            </h2>
+            <form onSubmit={editingExpense ? handleEditExpense : handleAddExpense} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Description
@@ -208,7 +275,7 @@ function Dashboard() {
                   required
                   value={newExpense.description}
                   onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
                 />
               </div>
 
@@ -222,7 +289,7 @@ function Dashboard() {
                   required
                   value={newExpense.amount}
                   onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
                 />
               </div>
 
@@ -233,7 +300,7 @@ function Dashboard() {
                 <select
                   value={newExpense.category_id}
                   onChange={(e) => setNewExpense({...newExpense, category_id: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
                 >
                   <option value="cat_food">Food</option>
                   <option value="cat_transport">Transportation</option>
@@ -250,7 +317,7 @@ function Dashboard() {
                   required
                   value={newExpense.date}
                   onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2 border"
                 />
               </div>
 
@@ -258,9 +325,16 @@ function Dashboard() {
                 type="submit"
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
               >
-                Add Expense
+                {editingExpense ? 'Update Expense' : 'Add Expense'}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Charts Section */}
+        {summary && summary.categories_summary && summary.categories_summary.length > 0 && (
+          <div className="mb-6">
+            <ExpenseChart data={summary.categories_summary} />
           </div>
         )}
 
@@ -313,6 +387,12 @@ function Dashboard() {
                         ${expense.amount.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => startEdit(expense)}
+                          className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        >
+                          Edit
+                        </button>
                         <button
                           onClick={() => handleDeleteExpense(expense.id)}
                           className="text-red-600 hover:text-red-900"
