@@ -1,13 +1,10 @@
 import React from 'react';
 import ExpenseChart from '../components/ExpenseChart';
 
-const MOCK_EXPENSE_DATA = [
-  { name: 'Rent/Housing', value: 1200 },
-  { name: 'Groceries/Food', value: 450 },
-  { name: 'Utilities', value: 180 },
-  { name: 'Transportation', value: 120 },
-  { name: 'Entertainment', value: 100 },
-  { name: 'Savings', value: 500 },
+const MOCK_CATEGORY_DATA = [
+  { category: 'Food', spent: 150.50, budget: 150, status: 'Warning' },
+  { category: 'Transportation', spent: 35.00, budget: 50, status: 'On Track' },
+  { category: 'Entertainment', spent: 80.00, budget: 75, status: 'Over Budget' },
 ];
 
 export default {
@@ -18,7 +15,7 @@ export default {
 
 export const CategoryBreakdown = {
   args: {
-    data: MOCK_EXPENSE_DATA,
+    data: MOCK_CATEGORY_DATA,
   },
 };
 

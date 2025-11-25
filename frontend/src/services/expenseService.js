@@ -1,5 +1,4 @@
-import { get, post, del } from './api';
-
+import { get, post, put, del } from './api'; 
 /**
  * Fetch all expenses for the current user
  */
@@ -72,6 +71,7 @@ export async function getDashboardSummary() {
 export default {
   getExpenses,
   addExpense,
+  updateExpense, 
   deleteExpense,
   getDashboardSummary,
 };
