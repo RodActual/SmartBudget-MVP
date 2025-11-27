@@ -2,6 +2,8 @@ import { getCurrentToken } from './authService';
 
 const API_URL = "https://smartbudget-mvp.onrender.com/api";
 
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 async function apiRequest(endpoint, options = {}) {
   try {
     // Get current auth token
