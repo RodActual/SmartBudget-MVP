@@ -1,3 +1,6 @@
+import { API_BASE_URL } from "../config";
+
+const response = await fetch(`${API_BASE_URL}/expenses`, { method: "GET" });
 import { get, post, put, del } from './api'; 
 
 /**
