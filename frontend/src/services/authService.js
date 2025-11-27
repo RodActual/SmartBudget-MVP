@@ -6,7 +6,6 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { auth } from '../config/firebase';
 
 /**
  * Register a new user
