@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { addExpense } from '../services/api';
-import { auth, db } from "./firebase";
 
 /**
  * A form for adding a new expense.

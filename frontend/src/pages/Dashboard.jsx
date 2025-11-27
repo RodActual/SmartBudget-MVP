@@ -4,7 +4,6 @@ import { getExpenses, addExpense, deleteExpense, updateExpense, getDashboardSumm
 import { useNavigate } from 'react-router-dom';
 import ExpenseChart from '../components/ExpenseChart';
 import AlertBanner from '../components/AlertBanner';
-import { auth, db } from "./firebase";
 
 
 function Dashboard() {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { loginUser, registerUser } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from "./firebase";
 
 
 function Login() {
