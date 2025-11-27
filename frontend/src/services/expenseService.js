@@ -1,4 +1,6 @@
 import { get, post, put, del } from './api'; 
+import { auth, db } from "./firebase";
+
 /**
  * Fetch all expenses for the current user
  */

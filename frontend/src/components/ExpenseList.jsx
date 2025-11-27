@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { auth, db } from "./firebase";
 
 function ExpenseList({ expenses, onEdit, onDelete }) {
   if (!expenses || expenses.length === 0) {

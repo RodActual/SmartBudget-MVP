@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { addExpense } from '../services/api'; // <-- IMPORTING from your new service
+import { addExpense } from '../services/api';
+import { auth, db } from "./firebase";
 
 /**
  * A form for adding a new expense.
@@ -9,14 +10,13 @@ const ExpenseForm = ({ onExpenseAdded }) => {
   // State for each form field
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [categoryId, setCategoryId] = useState(''); // Assuming '1' is a default/mock category
+  const [categoryId, setCategoryId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Defaults to today
 
   // State for form handling
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // This function now calls your Flask backend's add expense endpoint
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
@@ -25,7 +25,7 @@ const ExpenseForm = ({ onExpenseAdded }) => {
     const expenseData = {
       description,
       amount: parseFloat(amount),
-      category_id: categoryId || '1', // Use '1' (Food) if nothing is selected
+      category_id: categoryId || '1',
       date,
     };
 
