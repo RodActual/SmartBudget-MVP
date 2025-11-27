@@ -1,11 +1,10 @@
-import { auth, db } from "./firebase";
-
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
+import { auth, db } from '../firebase';
 
 /**
  * Register a new user
