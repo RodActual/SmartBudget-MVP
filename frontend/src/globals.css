@@ -3,6 +3,17 @@
 /* Import your Figma font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* Force clean light-mode */
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+}
+
+html:not(.dark) body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
 /* CSS Variables (Figma tokens) - Enhanced with solid backgrounds */
 :root {
   --font-size: 16px;
