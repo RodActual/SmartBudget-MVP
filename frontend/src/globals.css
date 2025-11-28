@@ -1,9 +1,9 @@
-/* src/globals.css */
+/* src/globals.css - Enhanced with solid backgrounds */
 
 /* Import your Figma font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* CSS Variables (Figma tokens) */
+/* CSS Variables (Figma tokens) - Enhanced with solid backgrounds */
 :root {
   --font-size: 16px;
   --background: #ffffff;
@@ -20,6 +20,25 @@
   --destructive-foreground: #ffffff;
   --border: #E0E0E0;
   --radius: 0.75rem;
+  
+  /* Input backgrounds - made solid */
+  --input-background: #ffffff;
+  --input: #E0E0E0;
+  
+  /* Switch backgrounds */
+  --switch-background: #E0E0E0;
+  
+  /* Popover/Dialog backgrounds */
+  --popover: #ffffff;
+  --popover-foreground: #222222;
+  
+  /* Accent colors */
+  --accent: #F5F5F5;
+  --accent-foreground: #222222;
+  
+  /* Ring colors for focus states */
+  --ring: #222222;
+  
   /* Chart colors */
   --chart-1: #00A86B;
   --chart-2: #00D084;
@@ -28,9 +47,9 @@
   --chart-5: #00563A;
 }
 
-/* Dark mode overrides */
+/* Dark mode overrides - All solid backgrounds */
 .dark {
-  --background: #222222;
+  --background: #1a1a1a;
   --foreground: #ffffff;
   --card: #2a2a2a;
   --card-foreground: #f5f5f5;
@@ -38,11 +57,29 @@
   --primary-foreground: #222222;
   --secondary: #333333;
   --secondary-foreground: #ffffff;
-  --muted: #444444;
+  --muted: #3a3a3a;
   --muted-foreground: #cccccc;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #555555;
+  --border: #444444;
+  
+  /* Input backgrounds - solid in dark mode */
+  --input-background: #2a2a2a;
+  --input: #3a3a3a;
+  
+  /* Switch backgrounds */
+  --switch-background: #3a3a3a;
+  
+  /* Popover/Dialog backgrounds */
+  --popover: #2a2a2a;
+  --popover-foreground: #f5f5f5;
+  
+  /* Accent colors */
+  --accent: #3a3a3a;
+  --accent-foreground: #ffffff;
+  
+  /* Ring colors for focus states */
+  --ring: #ffffff;
 }
 
 /* Base typography */
@@ -51,10 +88,142 @@ body {
   font-size: var(--font-size);
   background-color: var(--background);
   color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Optional: apply radius and borders globally */
+/* Ensure all major components have solid backgrounds */
 * {
   border-radius: var(--radius);
   border-color: var(--border);
+}
+
+/* Force solid backgrounds on key components */
+[data-slot="card"],
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"],
+[data-slot="popover-content"],
+[data-slot="select-content"],
+[data-slot="tabs-list"] {
+  background-color: var(--card) !important;
+  opacity: 1 !important;
+}
+
+/* Input elements should be solid */
+[data-slot="input"],
+[data-slot="select-trigger"],
+textarea,
+select {
+  background-color: var(--input-background) !important;
+  opacity: 1 !important;
+}
+
+/* Button backgrounds should be solid */
+[data-slot="button"] {
+  opacity: 1 !important;
+}
+
+/* Table backgrounds */
+[data-slot="table"] {
+  background-color: var(--card);
+}
+
+[data-slot="table-row"]:hover {
+  background-color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+/* Alert backgrounds */
+[data-slot="alert"] {
+  background-color: var(--card) !important;
+  opacity: 1 !important;
+}
+
+/* Progress bar background */
+[data-slot="progress"] {
+  background-color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+/* Badge backgrounds */
+[data-slot="badge"] {
+  opacity: 1 !important;
+}
+
+/* Switch backgrounds */
+[data-slot="switch"] {
+  background-color: var(--switch-background);
+  opacity: 1 !important;
+}
+
+[data-slot="switch"][data-state="checked"] {
+  background-color: var(--primary) !important;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Remove any transparent overlays that might cause issues */
+::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Ensure dropdown menus are solid */
+[role="menu"],
+[role="listbox"] {
+  background-color: var(--popover) !important;
+  opacity: 1 !important;
+}
+
+/* Fix any semi-transparent borders */
+* {
+  border-style: solid;
+}
+
+/* Ensure proper contrast in both modes */
+.dark [data-slot="card"],
+.dark [data-slot="dialog-content"],
+.dark [data-slot="alert-dialog-content"] {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+}
+
+/* Light mode shadows */
+[data-slot="card"],
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar styling for better visibility */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--secondary);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }
