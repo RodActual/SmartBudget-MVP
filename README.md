@@ -42,16 +42,6 @@ Many students and early-career professionals struggle with financial literacy an
 
 ---
 
-## Documentation & Screenshots
-
-All screenshots, demos, and tech evaluations are stored in the `docs/` folder.  
-Suggested screenshots to include:
-- Backend API (Postman or browser endpoint test)
-- Firebase database structure
-- UI mockup from StoryBook
-- Running frontend dashboard page
-- Spending chart or alert example
-
 ## Future Enhancements
 
 Bank API integration for automated transaction imports
