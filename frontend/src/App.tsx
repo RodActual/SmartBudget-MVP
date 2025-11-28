@@ -1,24 +1,23 @@
 import "./globals.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { ExpenseTracking } from "./components/ExpenseTracking";
 import { ChartsInsights } from "./components/ChartInsights";
 import { SettingsAlerts } from "./components/SpendingAlerts";
 import { AddTransactionDialog } from "./components/AddTransactionDialog";
+import { LoginForm } from "./components/LoginForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { LayoutDashboard, Receipt, BarChart3, Settings } from "lucide-react";
-import { LoginForm } from "./components/LoginForm"; // import login form
+import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut } from "lucide-react";
 import { auth, db } from "./firebase";
 import {
   collection,
-  query,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
-  doc,
+  doc
 } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 
 export interface Transaction {
   id: string;
@@ -30,6 +29,7 @@ export interface Transaction {
 }
 
 export interface Budget {
+  id?: string;
   category: string;
   budgeted: number;
   spent: number;
@@ -37,18 +37,11 @@ export interface Budget {
 }
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([
-    { category: "Housing", budgeted: 1500, spent: 0, color: "#3B82F6" },
-    { category: "Food", budgeted: 500, spent: 0, color: "#10B981" },
-    { category: "Transportation", budgeted: 300, spent: 0, color: "#F59E0B" },
-    { category: "Utilities", budgeted: 200, spent: 0, color: "#8B5CF6" },
-    { category: "Entertainment", budgeted: 200, spent: 0, color: "#EC4899" },
-    { category: "Health", budgeted: 150, spent: 0, color: "#06B6D4" },
-  ]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [user, setUser] = useState(auth.currentUser);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -58,41 +51,70 @@ export default function App() {
     return false;
   });
 
-  // Track auth state
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-    });
-    return unsubscribe;
+  // AUTO LOGOUT: 5 min inactivity
+  const logout = useCallback(() => {
+    signOut(auth);
   }, []);
 
-  // Fetch transactions from Firestore only if user is logged in
+  useEffect(() => {
+    const handleActivity = () => {
+      localStorage.setItem("lastActivity", Date.now().toString());
+    };
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+    };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const last = localStorage.getItem("lastActivity");
+      if (last && Date.now() - parseInt(last) > 5 * 60 * 1000) {
+        logout();
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [logout]);
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+  }, []);
+
+  // Load transactions
   useEffect(() => {
     if (!user) return;
-
-    const q = query(collection(db, "users", user.uid, "transactions"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data: Transaction[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Transaction));
-      setTransactions(data);
+    const transactionsRef = collection(db, "users", user.uid, "transactions");
+    const unsub = onSnapshot(transactionsRef, (snapshot) => {
+      const trans = snapshot.docs.map((doc) => {
+        const { id: _id, ...data } = doc.data() as Transaction;
+        return { id: doc.id, ...data };
+      });
+      setTransactions(trans);
     });
-
-    return unsubscribe;
+    return () => unsub();
   }, [user]);
 
-  // Dark mode
+  // Load budgets
   useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-    localStorage.setItem("darkMode", JSON.stringify(darkMode));
-  }, [darkMode]);
+    if (!user) return;
+    const budgetsRef = collection(db, "users", user.uid, "budgets");
+    const unsub = onSnapshot(budgetsRef, (snapshot) => {
+      const b = snapshot.docs.map((doc) => {
+        const { id: _id, ...data } = doc.data() as Budget;
+        return { id: doc.id, ...data };
+      });
+      setBudgets(b);
+    });
+    return () => unsub();
+  }, [user]);
 
-  // Transaction handlers
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     if (!user) return;
-    const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transaction);
+    await addDoc(collection(db, "users", user.uid, "transactions"), transaction);
     setDialogOpen(false);
   };
 
@@ -110,11 +132,21 @@ export default function App() {
     await deleteDoc(docRef);
   };
 
-  const openEditDialog = (transaction: Transaction) => { setEditingTransaction(transaction); setDialogOpen(true); };
-  const closeDialog = () => { setDialogOpen(false); setEditingTransaction(null); };
-  const openAddTransactionDialog = () => { setEditingTransaction(null); setDialogOpen(true); };
+  const openEditDialog = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setDialogOpen(true);
+  };
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingTransaction(null);
+  };
+  const openAddTransactionDialog = () => {
+    setEditingTransaction(null);
+    setDialogOpen(true);
+  };
 
-  // If user is not logged in, show login form
+  const toggleDarkMode = () => setDarkMode(!darkMode);
+
   if (!user) return <LoginForm />;
 
   return (
@@ -123,6 +155,13 @@ export default function App() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl">SmartBudget</h1>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-3 py-1 border rounded hover:bg-red-100 dark:hover:bg-red-800"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
         </div>
 
         {/* Tabs */}
@@ -150,7 +189,10 @@ export default function App() {
             <DashboardOverview
               budgets={budgets}
               transactions={transactions}
-              onOpenAddTransaction={openAddTransactionDialog} userName={""} savingsGoal={0}            />
+              onOpenAddTransaction={openAddTransactionDialog}
+              userName={user.displayName || "User"}
+              savingsGoal={0}
+            />
           </TabsContent>
 
           <TabsContent value="expenses" className="mt-6">
@@ -170,14 +212,15 @@ export default function App() {
             <SettingsAlerts
               budgets={budgets}
               transactions={transactions}
+              userName={user.displayName || "User"}
+              onUpdateUserName={() => {}}
+              savingsGoal={0}
+              onUpdateSavingsGoal={() => {}}
+              notificationsEnabled={true}
+              onUpdateNotifications={() => {}}
               darkMode={darkMode}
-              onUpdateDarkMode={setDarkMode} userName={""} onUpdateUserName={function (name: string): void {
-                throw new Error("Function not implemented.");
-              } } savingsGoal={0} onUpdateSavingsGoal={function (goal: number): void {
-                throw new Error("Function not implemented.");
-              } } notificationsEnabled={false} onUpdateNotifications={function (enabled: boolean): void {
-                throw new Error("Function not implemented.");
-              } }            />
+              onUpdateDarkMode={toggleDarkMode}
+            />
           </TabsContent>
         </Tabs>
 
