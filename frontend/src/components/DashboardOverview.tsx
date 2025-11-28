@@ -40,8 +40,8 @@ export function DashboardOverview({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl">Welcome back, {userName}!</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-3xl text-black">Welcome back, {userName}!</h1>
+          <p className="text-black mt-1">
             Here's an overview of your finances
           </p>
         </div>
@@ -54,9 +54,9 @@ export function DashboardOverview({
       </div>
 
       {/* Quick Add Button */}
-      <Button onClick={onOpenAddTransaction} size="lg" className="w-full sm:w-auto">
+      <Button onClick={onOpenAddTransaction} size="lg" className="w-full sm:w-auto text:black">
         <Plus className="h-5 w-5" />
-        Quick Add Expense
+        Add Transaction
       </Button>
 
       {/* Summary Cards */}
@@ -77,7 +77,7 @@ export function DashboardOverview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm">Total Expenses</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
+            <TrendingDown className="h-4 w-4 text-[#dc2626]" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl">${totalExpenses.toFixed(2)}</div>

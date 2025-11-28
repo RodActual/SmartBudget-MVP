@@ -49,11 +49,8 @@ export function AddTransactionDialog({
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [date, setDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
-  // Populate form when editing
   useEffect(() => {
     if (editingTransaction) {
       setDescription(editingTransaction.description);
@@ -62,7 +59,6 @@ export function AddTransactionDialog({
       setType(editingTransaction.type);
       setDate(editingTransaction.date);
     } else {
-      // Reset form when not editing
       setDescription("");
       setAmount("");
       setCategory("");
@@ -74,9 +70,7 @@ export function AddTransactionDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!description || !amount || !category) {
-      return;
-    }
+    if (!description || !amount || !category) return;
 
     const transactionData = {
       date,
@@ -105,15 +99,14 @@ export function AddTransactionDialog({
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>
-              {editingTransaction ? "Edit Transaction" : "Add Transaction"}
-            </DialogTitle>
+            <DialogTitle>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
             <DialogDescription>
               {editingTransaction
                 ? "Update the transaction details below."
                 : "Add a new transaction to track your spending or income."}
             </DialogDescription>
           </DialogHeader>
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="date">Date</Label>
@@ -125,6 +118,7 @@ export function AddTransactionDialog({
                 required
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
               <Input
@@ -135,6 +129,7 @@ export function AddTransactionDialog({
                 required
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="category">Category</Label>
               <Select value={category} onValueChange={setCategory} required>
@@ -143,20 +138,15 @@ export function AddTransactionDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="type">Type</Label>
-              <Select
-                value={type}
-                onValueChange={(value: "income" | "expense") => setType(value)}
-                required
-              >
+              <Select value={type} onValueChange={(value: "income" | "expense") => setType(value)} required>
                 <SelectTrigger id="type">
                   <SelectValue />
                 </SelectTrigger>
@@ -166,6 +156,7 @@ export function AddTransactionDialog({
                 </SelectContent>
               </Select>
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="amount">Amount</Label>
               <Input
@@ -179,17 +170,12 @@ export function AddTransactionDialog({
               />
             </div>
           </div>
+
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">
-              {editingTransaction ? "Update" : "Add"} Transaction
-            </Button>
+            <Button type="submit">{editingTransaction ? "Update" : "Add"} Transaction</Button>
           </DialogFooter>
         </form>
       </DialogContent>

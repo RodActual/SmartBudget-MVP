@@ -17,9 +17,7 @@ interface SettingsAlertsProps {
   onUpdateSavingsGoal: (goal: number) => void;
   notificationsEnabled: boolean;
   onUpdateNotifications: (enabled: boolean) => void;
-  darkMode: boolean;
-  onUpdateDarkMode: (enabled: boolean) => void;
-  onSaveSettings: () => Promise<void>; // <-- add this prop
+  onSaveSettings: () => Promise<void>;
 }
 
 export function SettingsAlerts({
@@ -31,8 +29,6 @@ export function SettingsAlerts({
   onUpdateSavingsGoal,
   notificationsEnabled,
   onUpdateNotifications,
-  darkMode,
-  onUpdateDarkMode,
   onSaveSettings,
 }: SettingsAlertsProps) {
   const [tempUserName, setTempUserName] = useState(userName);
@@ -130,22 +126,6 @@ export function SettingsAlerts({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="darkMode" className="flex items-center gap-2">
-                    <Moon className="h-4 w-4" />
-                    Dark Mode
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Switch between light and dark theme
-                  </p>
-                </div>
-                <Switch
-                  id="darkMode"
-                  checked={darkMode}
-                  onCheckedChange={onUpdateDarkMode}
-                />
-              </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="notifications" className="flex items-center gap-2">

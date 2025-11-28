@@ -7,9 +7,8 @@
 :root {
   --bg: #ffffff;
   --text: #000000;
-}
 
-html:not(.dark) body {
+}html:not(.dark) {
   background-color: var(--bg) !important;
   color: var(--text) !important;
 }
@@ -56,41 +55,6 @@ html:not(.dark) body {
   --chart-3: #008F5D;
   --chart-4: #00724A;
   --chart-5: #00563A;
-}
-
-/* Dark mode overrides - All solid backgrounds */
-.dark {
-  --background: #1a1a1a;
-  --foreground: #ffffff;
-  --card: #2a2a2a;
-  --card-foreground: #f5f5f5;
-  --primary: #ffffff;
-  --primary-foreground: #222222;
-  --secondary: #333333;
-  --secondary-foreground: #ffffff;
-  --muted: #3a3a3a;
-  --muted-foreground: #cccccc;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #444444;
-  
-  /* Input backgrounds - solid in dark mode */
-  --input-background: #2a2a2a;
-  --input: #3a3a3a;
-  
-  /* Switch backgrounds */
-  --switch-background: #3a3a3a;
-  
-  /* Popover/Dialog backgrounds */
-  --popover: #2a2a2a;
-  --popover-foreground: #f5f5f5;
-  
-  /* Accent colors */
-  --accent: #3a3a3a;
-  --accent-foreground: #ffffff;
-  
-  /* Ring colors for focus states */
-  --ring: #ffffff;
 }
 
 /* Base typography */

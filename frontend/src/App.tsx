@@ -33,7 +33,7 @@ import {
   where,
 } from "firebase/firestore";
 
-// Exported types
+// Types
 export interface Transaction {
   id: string;
   date: string;
@@ -53,7 +53,7 @@ export interface Budget {
   userId?: string;
 }
 
-// Inactivity timeout in milliseconds (15 minutes)
+// Inactivity timeout (15 mins)
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
 
 export default function App() {
@@ -68,33 +68,17 @@ export default function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("darkMode");
-      return saved ? JSON.parse(saved) : false;
-    }
-    return false;
-  });
 
   // Inactivity tracking
-const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-
-  // Apply dark mode
-  useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-    localStorage.setItem("darkMode", JSON.stringify(darkMode));
-  }, [darkMode]);
-
-  // Authentication listener
+  // Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -102,51 +86,32 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetInactivityTimer = useCallback(() => {
     if (!user) return;
 
-    // Clear existing timers
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     if (warningTimer.current) clearTimeout(warningTimer.current);
     setShowInactivityWarning(false);
 
-    // Show warning 2 minutes before logout
-    warningTimer.current = setTimeout(() => {
-      setShowInactivityWarning(true);
-    }, INACTIVITY_TIMEOUT - 2 * 60 * 1000);
+    warningTimer.current = setTimeout(() => setShowInactivityWarning(true), INACTIVITY_TIMEOUT - 2 * 60 * 1000);
 
-    // Set logout timer
-    inactivityTimer.current = setTimeout(() => {
-      handleLogout(true);
-    }, INACTIVITY_TIMEOUT);
+    inactivityTimer.current = setTimeout(() => handleLogout(true), INACTIVITY_TIMEOUT);
   }, [user]);
 
-  // Inactivity detection
   useEffect(() => {
     if (!user) return;
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    const handleActivity = () => {
-      resetInactivityTimer();
-    };
+    const handleActivity = () => resetInactivityTimer();
 
-    // Add event listeners
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity);
-    });
-
-    // Initialize timer
+    events.forEach(event => document.addEventListener(event, handleActivity));
     resetInactivityTimer();
 
-    // Cleanup
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity);
-      });
+      events.forEach(event => document.removeEventListener(event, handleActivity));
       if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
       if (warningTimer.current) clearTimeout(warningTimer.current);
     };
   }, [user, resetInactivityTimer]);
 
-  // Firestore real-time listeners for authenticated users
+  // Firestore listeners
   useEffect(() => {
     if (!user) return;
 
@@ -154,7 +119,7 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
       collection(db, "transactions"),
       where("userId", "==", user.uid)
     );
-    
+
     const budgetsQuery = query(
       collection(db, "budgets"),
       where("userId", "==", user.uid)
@@ -166,7 +131,7 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
         ...doc.data(),
       } as Transaction));
       setTransactions(data);
-    });
+    }, (error) => console.error("Error fetching transactions:", error));
 
     const unsubscribeBudgets = onSnapshot(budgetsQuery, (snapshot) => {
       const data: Budget[] = snapshot.docs.map((doc) => ({
@@ -174,7 +139,7 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
         ...doc.data(),
       } as Budget));
       setBudgets(data);
-    });
+    }, (error) => console.error("Error fetching budgets:", error));
 
     return () => {
       unsubscribeTransactions();
@@ -182,7 +147,7 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     };
   }, [user]);
 
-  // Logout handler
+  // Logout
   const handleLogout = async (isAutoLogout = false) => {
     try {
       await auth.signOut();
@@ -191,48 +156,62 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
       setUserName("User");
       setSavingsGoal(0);
       setActiveTab("dashboard");
-      
-      if (isAutoLogout) {
-        alert("You have been logged out due to inactivity.");
-      }
+
+      if (isAutoLogout) alert("You have been logged out due to inactivity.");
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
 
-  // Continue session (dismiss inactivity warning)
+  // Continue session
   const handleContinueSession = () => {
     setShowInactivityWarning(false);
     resetInactivityTimer();
   };
 
-  // Add transaction (id omitted, Firestore generates it)
+  // Add transaction
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
     if (!user) return;
-    
-    await addDoc(collection(db, "transactions"), {
-      ...transaction,
-      userId: user.uid,
-    });
-    setDialogOpen(false);
+
+    try {
+      const docRef = await addDoc(collection(db, "transactions"), {
+        ...transaction,
+        userId: user.uid,
+      });
+
+      // Update UI immediately
+      setTransactions(prev => [...prev, { ...transaction, id: docRef.id, userId: user.uid }]);
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+    }
   };
 
   // Edit transaction
   const handleEditTransaction = async (transaction: Omit<Transaction, "id">) => {
     if (!editingTransaction || !user) return;
-    
-    const docRef = doc(db, "transactions", editingTransaction.id);
-    await updateDoc(docRef, transaction);
-    setEditingTransaction(null);
-    setDialogOpen(false);
+
+    try {
+      const docRef = doc(db, "transactions", editingTransaction.id);
+      await updateDoc(docRef, transaction);
+      setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? { ...t, ...transaction } : t));
+      setEditingTransaction(null);
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Error editing transaction:", error);
+    }
   };
 
-  // Delete transaction
   const handleDeleteTransaction = async (id: string) => {
     if (!user) return;
-    
-    const docRef = doc(db, "transactions", id);
-    await deleteDoc(docRef);
+
+    try {
+      const docRef = doc(db, "transactions", id);
+      await deleteDoc(docRef);
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+    }
   };
 
   const openEditDialog = (transaction: Transaction) => {
@@ -259,49 +238,32 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
         userName,
         savingsGoal,
         notificationsEnabled,
-        darkMode,
       });
     } catch (error) {
       console.error("Error saving settings:", error);
     }
   };
 
-  // Show login if not authenticated
-  if (!user && !loading) {
-    return <LoginForm onLogin={() => {}} />;
-  }
+  if (!user && !loading) return <LoginForm onLogin={() => {}} />;
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-2xl font-semibold">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="text-2xl font-semibold">Loading...</div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+        <div className="flex items-center justify-between bg-gray-200 rounded-lg shadow-md p-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-              SmartBudget
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-              Your personal finance manager
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-black">SmartBudget</h1>
+            <p className="text-sm text-black mt-1">Your personal finance manager</p>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              {user?.email}
-            </span>
-            <Button
-              onClick={() => handleLogout(false)}
-              variant="destructive"
-              size="sm"
-            >
+            <span className="text-sm text-black">{user?.email}</span>
+            <Button onClick={() => handleLogout(false)} variant="destructive" size="sm">
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
@@ -310,7 +272,7 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -366,8 +328,6 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
               onUpdateSavingsGoal={setSavingsGoal}
               notificationsEnabled={notificationsEnabled}
               onUpdateNotifications={setNotificationsEnabled}
-              darkMode={darkMode}
-              onUpdateDarkMode={setDarkMode}
               onSaveSettings={handleSaveSettings}
             />
           </TabsContent>
@@ -382,14 +342,12 @@ const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
           editingTransaction={editingTransaction}
         />
 
-        {/* Inactivity Warning Dialog */}
+        {/* Inactivity Warning */}
         <AlertDialog open={showInactivityWarning} onOpenChange={setShowInactivityWarning}>
-          <AlertDialogContent className="bg-white dark:bg-gray-800">
+          <AlertDialogContent className="bg-white">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-gray-900 dark:text-white">
-                Are you still there?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+              <AlertDialogTitle className="text-gray-900">Are you still there?</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-600">
                 You've been inactive for a while. You'll be automatically logged out in 2 minutes for security reasons.
               </AlertDialogDescription>
             </AlertDialogHeader>
