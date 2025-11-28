@@ -1,78 +1,49 @@
 import { useState } from "react";
-import { auth } from "../firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase"; // your firebase.js file
 
-export function LoginForm() {
+interface LoginFormProps {
+  onLogin: (uid: string) => void;
+}
+
+export function LoginForm({ onLogin }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
+  const handleLogin = async () => {
     try {
-      if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
-      // No need to redirect manually — App.tsx tracks auth state
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      onLogin(uid); // pass UID to App
     } catch (err: any) {
       setError(err.message);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-sm"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">
-          {isRegistering ? "Register" : "Login"}
-        </h2>
-
-        {error && (
-          <p className="text-red-500 mb-4 text-sm">{error}</p>
-        )}
-
-        <input
-          type="email"
+    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded shadow">
+      <h2 className="text-2xl mb-4">Login</h2>
+      {error && <p className="text-red-500">{error}</p>}
+      <div className="mb-4">
+        <Input
           placeholder="Email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-2 mb-4 border rounded dark:bg-gray-700 dark:text-white"
-          required
         />
-        <input
-          type="password"
+      </div>
+      <div className="mb-4">
+        <Input
           placeholder="Password"
+          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 mb-4 border rounded dark:bg-gray-700 dark:text-white"
-          required
         />
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-        >
-          {isRegistering ? "Register" : "Login"}
-        </button>
-
-        <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-300">
-          {isRegistering ? "Already have an account?" : "Don't have an account?"}{" "}
-          <button
-            type="button"
-            onClick={() => setIsRegistering(!isRegistering)}
-            className="text-blue-600 hover:underline"
-          >
-            {isRegistering ? "Login" : "Register"}
-          </button>
-        </p>
-      </form>
+      </div>
+      <Button onClick={handleLogin} className="w-full">Login</Button>
     </div>
   );
 }

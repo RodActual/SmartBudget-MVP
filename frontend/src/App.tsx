@@ -1,24 +1,24 @@
 import "./globals.css";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { ExpenseTracking } from "./components/ExpenseTracking";
 import { ChartsInsights } from "./components/ChartInsights";
 import { SettingsAlerts } from "./components/SpendingAlerts";
 import { AddTransactionDialog } from "./components/AddTransactionDialog";
-import { LoginForm } from "./components/LoginForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut } from "lucide-react";
-import { auth, db } from "./firebase";
+import { LayoutDashboard, Receipt, BarChart3, Settings } from "lucide-react";
+
+import { db } from "./firebase";
 import {
   collection,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
-  doc
+  doc,
 } from "firebase/firestore";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
 
+// Exported types
 export interface Transaction {
   id: string;
   date: string;
@@ -37,11 +37,13 @@ export interface Budget {
 }
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [userName, setUserName] = useState("User");
+  const [savingsGoal, setSavingsGoal] = useState(0);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -51,84 +53,57 @@ export default function App() {
     return false;
   });
 
-  // AUTO LOGOUT: 5 min inactivity
-  const logout = useCallback(() => {
-    signOut(auth);
-  }, []);
-
+  // Apply dark mode
   useEffect(() => {
-    const handleActivity = () => {
-      localStorage.setItem("lastActivity", Date.now().toString());
-    };
-    window.addEventListener("mousemove", handleActivity);
-    window.addEventListener("keydown", handleActivity);
+    if (darkMode) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
+  }, [darkMode]);
+
+  // Firestore real-time listeners
+  useEffect(() => {
+    const transactionsRef = collection(db, "transactions");
+    const unsubscribeTransactions = onSnapshot(transactionsRef, (snapshot) => {
+      const data: Transaction[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Transaction));
+      setTransactions(data);
+    });
+
+    const budgetsRef = collection(db, "budgets");
+    const unsubscribeBudgets = onSnapshot(budgetsRef, (snapshot) => {
+      const data: Budget[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Budget));
+      setBudgets(data);
+    });
+
     return () => {
-      window.removeEventListener("mousemove", handleActivity);
-      window.removeEventListener("keydown", handleActivity);
+      unsubscribeTransactions();
+      unsubscribeBudgets();
     };
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const last = localStorage.getItem("lastActivity");
-      if (last && Date.now() - parseInt(last) > 5 * 60 * 1000) {
-        logout();
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [logout]);
-
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      setUser(user);
-    });
-  }, []);
-
-  // Load transactions
-  useEffect(() => {
-    if (!user) return;
-    const transactionsRef = collection(db, "users", user.uid, "transactions");
-    const unsub = onSnapshot(transactionsRef, (snapshot) => {
-      const trans = snapshot.docs.map((doc) => {
-        const { id: _id, ...data } = doc.data() as Transaction;
-        return { id: doc.id, ...data };
-      });
-      setTransactions(trans);
-    });
-    return () => unsub();
-  }, [user]);
-
-  // Load budgets
-  useEffect(() => {
-    if (!user) return;
-    const budgetsRef = collection(db, "users", user.uid, "budgets");
-    const unsub = onSnapshot(budgetsRef, (snapshot) => {
-      const b = snapshot.docs.map((doc) => {
-        const { id: _id, ...data } = doc.data() as Budget;
-        return { id: doc.id, ...data };
-      });
-      setBudgets(b);
-    });
-    return () => unsub();
-  }, [user]);
-
+  // Add transaction (id omitted, Firestore generates it)
   const handleAddTransaction = async (transaction: Omit<Transaction, "id">) => {
-    if (!user) return;
-    await addDoc(collection(db, "users", user.uid, "transactions"), transaction);
+    await addDoc(collection(db, "transactions"), transaction);
     setDialogOpen(false);
   };
 
+// Edit transaction
   const handleEditTransaction = async (transaction: Omit<Transaction, "id">) => {
-    if (!user || !editingTransaction) return;
-    const docRef = doc(db, "users", user.uid, "transactions", editingTransaction.id);
+    if (!editingTransaction) return;
+    const docRef = doc(db, "transactions", editingTransaction.id);
     await updateDoc(docRef, transaction);
     setEditingTransaction(null);
     setDialogOpen(false);
   };
 
+  // Delete transaction
   const handleDeleteTransaction = async (id: string) => {
-    if (!user) return;
-    const docRef = doc(db, "users", user.uid, "transactions", id);
+    const docRef = doc(db, "transactions", id);
     await deleteDoc(docRef);
   };
 
@@ -136,32 +111,28 @@ export default function App() {
     setEditingTransaction(transaction);
     setDialogOpen(true);
   };
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingTransaction(null);
   };
+
   const openAddTransactionDialog = () => {
     setEditingTransaction(null);
     setDialogOpen(true);
   };
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
-
-  if (!user) return <LoginForm />;
-
   return (
-    <div className="min-h-screen bg-secondary">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl">SmartBudget</h1>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 px-3 py-1 border rounded hover:bg-red-100 dark:hover:bg-red-800"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl">SmartBudget</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Your personal finance manager
+            </p>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -190,8 +161,8 @@ export default function App() {
               budgets={budgets}
               transactions={transactions}
               onOpenAddTransaction={openAddTransactionDialog}
-              userName={user.displayName || "User"}
-              savingsGoal={0}
+              userName={userName}
+              savingsGoal={savingsGoal}
             />
           </TabsContent>
 
@@ -205,22 +176,27 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="insights" className="mt-6">
-            <ChartsInsights budgets={budgets} transactions={transactions} onUpdateBudgets={setBudgets} />
+            <ChartsInsights
+              budgets={budgets}
+              transactions={transactions}
+              onUpdateBudgets={setBudgets}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">
             <SettingsAlerts
               budgets={budgets}
               transactions={transactions}
-              userName={user.displayName || "User"}
-              onUpdateUserName={() => {}}
-              savingsGoal={0}
-              onUpdateSavingsGoal={() => {}}
-              notificationsEnabled={true}
-              onUpdateNotifications={() => {}}
+              userName={userName}
+              onUpdateUserName={setUserName}
+              savingsGoal={savingsGoal}
+              onUpdateSavingsGoal={setSavingsGoal}
+              notificationsEnabled={notificationsEnabled}
+              onUpdateNotifications={setNotificationsEnabled}
               darkMode={darkMode}
-              onUpdateDarkMode={toggleDarkMode}
-            />
+              onUpdateDarkMode={setDarkMode} onSaveSettings={function (): Promise<void> {
+                throw new Error("Function not implemented.");
+              } }            />
           </TabsContent>
         </Tabs>
 

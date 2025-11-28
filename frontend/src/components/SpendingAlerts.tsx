@@ -5,7 +5,7 @@ import { Switch } from "../ui/switch";
 import { Button } from "../ui/button";
 import { AlertsNotifications } from "../components/AlertsNotifications";
 import { Bell, Save, Target, Moon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Budget, Transaction } from "../App";
 
 interface SettingsAlertsProps {
@@ -19,6 +19,7 @@ interface SettingsAlertsProps {
   onUpdateNotifications: (enabled: boolean) => void;
   darkMode: boolean;
   onUpdateDarkMode: (enabled: boolean) => void;
+  onSaveSettings: () => Promise<void>; // <-- add this prop
 }
 
 export function SettingsAlerts({
@@ -32,17 +33,33 @@ export function SettingsAlerts({
   onUpdateNotifications,
   darkMode,
   onUpdateDarkMode,
+  onSaveSettings,
 }: SettingsAlertsProps) {
   const [tempUserName, setTempUserName] = useState(userName);
   const [tempSavingsGoal, setTempSavingsGoal] = useState(savingsGoal.toString());
 
-  const handleSave = () => {
+  // Update local state when parent props change
+  useEffect(() => {
+    setTempUserName(userName);
+  }, [userName]);
+
+  useEffect(() => {
+    setTempSavingsGoal(savingsGoal.toString());
+  }, [savingsGoal]);
+
+  const handleSave = async () => {
     if (tempUserName.trim()) {
       onUpdateUserName(tempUserName.trim());
     }
+
     const goalValue = parseFloat(tempSavingsGoal);
     if (!isNaN(goalValue) && goalValue >= 0) {
       onUpdateSavingsGoal(goalValue);
+    }
+
+    // Persist settings to Firestore
+    if (onSaveSettings) {
+      await onSaveSettings();
     }
   };
 
