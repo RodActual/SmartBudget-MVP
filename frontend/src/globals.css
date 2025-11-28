@@ -3,11 +3,6 @@
 /* Import your Figma font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* Tailwind base layers must be first */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* CSS Variables (Figma tokens) */
 :root {
   --font-size: 16px;
