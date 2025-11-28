@@ -3,20 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-
   "homepage": "https://RodActual.github.io/SmartBudget-MVP",
-
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "tailwind": "npx @tailwindcss/cli -i ./src/index.css -o ./src/output.css --watch",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
-  },
+    
 
+  },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.1.2",
     "@storybook/addon-a11y": "^10.0.6",
@@ -24,28 +23,42 @@
     "@storybook/addon-onboarding": "^10.0.6",
     "@storybook/addon-vitest": "^10.0.6",
     "@storybook/react-vite": "^10.0.6",
+    "@tailwindcss/cli": "^4.1.17",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@vitest/browser-playwright": "^4.0.8",
     "@vitest/coverage-v8": "^4.0.8",
-    "autoprefixer": "^10.4.21",
+    "autoprefixer": "^10.4.22",
+    "gh-pages": "^6.0.0",
     "playwright": "^1.56.1",
     "postcss": "^8.5.6",
     "prop-types": "^15.8.1",
     "storybook": "^10.0.6",
     "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3",
     "vite": "^7.1.7",
-    "vitest": "^4.0.8",
-    "gh-pages": "^6.0.0"
+    "vitest": "^4.0.8"
   },
-
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-progress": "^1.1.8",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@vitejs/plugin-react": "^5.1.0",
     "chart.js": "^4.5.1",
+    "class-variance-authority": "^0.7.1",
     "firebase": "^12.6.0",
     "lucide-react": "^0.553.0",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6",
-    "recharts": "^3.4.1"
+    "recharts": "^3.4.1",
+    "tailwind-merge": "^3.4.0"
   }
 }

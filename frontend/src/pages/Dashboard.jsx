@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { logoutUser, getCurrentUser } from '../services/authService';
 import { getExpenses, addExpense, deleteExpense, updateExpense, getDashboardSummary } from '../services/expenseService';
 import { useNavigate } from 'react-router-dom';
-import ExpenseChart from '../components/ExpenseChart';
-import AlertBanner from '../components/AlertBanner';
+import ExpenseChart from '../old_components/ExpenseChart';
+import AlertBanner from '../old_components/AlertBanner';
 
 
 function Dashboard() {

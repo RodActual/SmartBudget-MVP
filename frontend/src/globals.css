@@ -1,0 +1,65 @@
+/* src/globals.css */
+
+/* Import your Figma font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Tailwind base layers must be first */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables (Figma tokens) */
+:root {
+  --font-size: 16px;
+  --background: #ffffff;
+  --foreground: #222222;
+  --card: #ffffff;
+  --card-foreground: #222222;
+  --primary: #222222;
+  --primary-foreground: #ffffff;
+  --secondary: #F5F5F5;
+  --secondary-foreground: #222222;
+  --muted: #F5F5F5;
+  --muted-foreground: #666666;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #E0E0E0;
+  --radius: 0.75rem;
+  /* Chart colors */
+  --chart-1: #00A86B;
+  --chart-2: #00D084;
+  --chart-3: #008F5D;
+  --chart-4: #00724A;
+  --chart-5: #00563A;
+}
+
+/* Dark mode overrides */
+.dark {
+  --background: #222222;
+  --foreground: #ffffff;
+  --card: #2a2a2a;
+  --card-foreground: #f5f5f5;
+  --primary: #ffffff;
+  --primary-foreground: #222222;
+  --secondary: #333333;
+  --secondary-foreground: #ffffff;
+  --muted: #444444;
+  --muted-foreground: #cccccc;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #555555;
+}
+
+/* Base typography */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: var(--font-size);
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Optional: apply radius and borders globally */
+* {
+  border-radius: var(--radius);
+  border-color: var(--border);
+}
