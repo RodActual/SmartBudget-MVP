@@ -123,7 +123,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-secondary">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
