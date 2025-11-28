@@ -125,13 +125,37 @@ export default function App() {
       where("userId", "==", user.uid)
     );
 
-    const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-      const data: Transaction[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Transaction));
-      setTransactions(data);
-    }, (error) => console.error("Error fetching transactions:", error));
+const unsubscribeTransactions = onSnapshot(
+  transactionsQuery,
+  (snapshot) => {
+    setTransactions((prev) => {
+      const updated = [...prev];
+
+      snapshot.docChanges().forEach((change) => {
+        const docData = { id: change.doc.id, ...change.doc.data() } as Transaction;
+
+        if (change.type === "added") {
+          if (!updated.some((t) => t.id === docData.id)) {
+            updated.push(docData);
+          }
+        }
+
+        if (change.type === "modified") {
+          const index = updated.findIndex((t) => t.id === docData.id);
+          if (index !== -1) updated[index] = docData;
+        }
+
+        if (change.type === "removed") {
+          const index = updated.findIndex((t) => t.id === docData.id);
+          if (index !== -1) updated.splice(index, 1);
+        }
+      });
+
+      return updated;
+    });
+  },
+  (error) => console.error("Error fetching transactions:", error)
+);
 
     const unsubscribeBudgets = onSnapshot(budgetsQuery, (snapshot) => {
       const data: Budget[] = snapshot.docs.map((doc) => ({
@@ -180,7 +204,6 @@ export default function App() {
       });
 
       // Update UI immediately
-      setTransactions(prev => [...prev, { ...transaction, id: docRef.id, userId: user.uid }]);
       setDialogOpen(false);
     } catch (error) {
       console.error("Error adding transaction:", error);
