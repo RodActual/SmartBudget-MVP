@@ -2,6 +2,7 @@ import "./globals.css";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
+import { getDocs } from "firebase/firestore";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { ExpenseTracking } from "./components/ExpenseTracking";
 import { ChartsInsights } from "./components/ChartInsights";
@@ -95,6 +96,7 @@ export default function App() {
     inactivityTimer.current = setTimeout(() => handleLogout(true), INACTIVITY_TIMEOUT);
   }, [user]);
 
+  // Inactivity detection
   useEffect(() => {
     if (!user) return;
 
@@ -125,51 +127,103 @@ export default function App() {
       where("userId", "==", user.uid)
     );
 
-const unsubscribeTransactions = onSnapshot(
-  transactionsQuery,
-  (snapshot) => {
-    setTransactions((prev) => {
-      const updated = [...prev];
+    const unsubscribeTransactions = onSnapshot(
+      transactionsQuery,
+      (snapshot) => {
+        setTransactions((prev) => {
+          const updated = [...prev];
 
-      snapshot.docChanges().forEach((change) => {
-        const docData = { id: change.doc.id, ...change.doc.data() } as Transaction;
+          snapshot.docChanges().forEach((change) => {
+            const docData = { id: change.doc.id, ...change.doc.data() } as Transaction;
 
-        if (change.type === "added") {
-          if (!updated.some((t) => t.id === docData.id)) {
-            updated.push(docData);
-          }
-        }
+            if (change.type === "added") {
+              if (!updated.some((t) => t.id === docData.id)) {
+                updated.push(docData);
+              }
+            }
 
-        if (change.type === "modified") {
-          const index = updated.findIndex((t) => t.id === docData.id);
-          if (index !== -1) updated[index] = docData;
-        }
+            if (change.type === "modified") {
+              const index = updated.findIndex((t) => t.id === docData.id);
+              if (index !== -1) updated[index] = docData;
+            }
 
-        if (change.type === "removed") {
-          const index = updated.findIndex((t) => t.id === docData.id);
-          if (index !== -1) updated.splice(index, 1);
-        }
-      });
+            if (change.type === "removed") {
+              const index = updated.findIndex((t) => t.id === docData.id);
+              if (index !== -1) updated.splice(index, 1);
+            }
+          });
 
-      return updated;
-    });
-  },
-  (error) => console.error("Error fetching transactions:", error)
-);
+          // Sort by date, most recent first
+          return updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+      },
+      (error) => console.error("Error fetching transactions:", error)
+    );
 
-    const unsubscribeBudgets = onSnapshot(budgetsQuery, (snapshot) => {
-      const data: Budget[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Budget));
-      setBudgets(data);
-    }, (error) => console.error("Error fetching budgets:", error));
+    const unsubscribeBudgets = onSnapshot(
+      budgetsQuery,
+      (snapshot) => {
+        const budgetData: Budget[] = [];
+        snapshot.forEach((doc) => {
+          budgetData.push({ id: doc.id, ...doc.data() } as Budget);
+        });
+        setBudgets(budgetData);
+      },
+      (error) => console.error("Error fetching budgets:", error)
+    );
 
     return () => {
       unsubscribeTransactions();
       unsubscribeBudgets();
     };
   }, [user]);
+
+  // Budget update handler
+  const handleUpdateBudgets = async (newBudgets: Budget[]) => {
+    if (!user) return;
+
+    try {
+      // Get current budgets from Firestore
+      const budgetsQuery = query(
+        collection(db, "budgets"),
+        where("userId", "==", user.uid)
+      );
+      const snapshot = await getDocs(budgetsQuery);
+      const existingBudgetIds = snapshot.docs.map(doc => doc.id);
+
+      // Update or add each budget
+      for (const budget of newBudgets) {
+        const budgetData = {
+          category: budget.category,
+          budgeted: budget.budgeted,
+          spent: budget.spent || 0,
+          color: budget.color,
+          userId: user.uid,
+        };
+
+        if (budget.id && existingBudgetIds.includes(budget.id)) {
+          // Update existing budget
+          const budgetRef = doc(db, "budgets", budget.id);
+          await updateDoc(budgetRef, budgetData);
+        } else {
+          // Add new budget
+          await addDoc(collection(db, "budgets"), budgetData);
+        }
+      }
+
+      // Delete removed budgets
+      const newBudgetIds = newBudgets.map(b => b.id).filter(Boolean);
+      const budgetsToDelete = existingBudgetIds.filter(id => !newBudgetIds.includes(id));
+      
+      for (const budgetId of budgetsToDelete) {
+        await deleteDoc(doc(db, "budgets", budgetId));
+      }
+
+    } catch (error) {
+      console.error("Error updating budgets:", error);
+      alert("Failed to update budgets. Please try again.");
+    }
+  };
 
   // Logout
   const handleLogout = async (isAutoLogout = false) => {
@@ -198,12 +252,11 @@ const unsubscribeTransactions = onSnapshot(
     if (!user) return;
 
     try {
-      const docRef = await addDoc(collection(db, "transactions"), {
+      await addDoc(collection(db, "transactions"), {
         ...transaction,
         userId: user.uid,
       });
 
-      // Update UI immediately
       setDialogOpen(false);
     } catch (error) {
       console.error("Error adding transaction:", error);
@@ -225,6 +278,7 @@ const unsubscribeTransactions = onSnapshot(
     }
   };
 
+  // Delete transaction
   const handleDeleteTransaction = async (id: string) => {
     if (!user) return;
 
@@ -337,7 +391,7 @@ const unsubscribeTransactions = onSnapshot(
             <ChartsInsights
               budgets={budgets}
               transactions={transactions}
-              onUpdateBudgets={setBudgets}
+              onUpdateBudgets={handleUpdateBudgets}
             />
           </TabsContent>
 
