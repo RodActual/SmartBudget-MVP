@@ -9,6 +9,7 @@ import { ChartsInsights } from "./components/ChartInsights";
 import { SettingsAlerts } from "./components/SpendingAlerts";
 import { AddTransactionDialog } from "./components/AddTransactionDialog";
 import { LoginForm } from "./components/LoginForm";
+import { AlertsNotificationBell, AlertSettings } from "./components/AlertsNotificationBell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut } from "lucide-react";
@@ -69,6 +70,14 @@ export default function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  const [alertSettings, setAlertSettings] = useState<AlertSettings>({
+    budgetWarningEnabled: true,
+    budgetWarningThreshold: 80,
+    budgetExceededEnabled: true,
+    largeTransactionEnabled: true,
+    largeTransactionAmount: 500,
+    weeklyReportEnabled: false,
+  });
 
   // Inactivity tracking
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -338,11 +347,17 @@ export default function App() {
             <h1 className="text-2xl sm:text-3xl font-bold text-black">SmartBudget</h1>
             <p className="text-sm text-black mt-1">Your personal finance manager</p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-black">{user?.email}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-black hidden sm:inline">{user?.email}</span>
+            <AlertsNotificationBell
+              budgets={budgets}
+              transactions={transactions}
+              alertSettings={alertSettings}
+              onUpdateAlertSettings={setAlertSettings}
+            />
             <Button onClick={() => handleLogout(false)} variant="destructive" size="sm">
               <LogOut className="h-4 w-4" />
-              Logout
+              <span className="hidden sm:inline ml-2">Logout</span>
             </Button>
           </div>
         </div>
