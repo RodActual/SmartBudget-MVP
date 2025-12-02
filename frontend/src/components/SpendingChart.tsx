@@ -104,7 +104,7 @@ export function SpendingChart({ transactions }: SpendingChartProps) {
                 dataKey="amount"
                 stroke="#000000"
                 strokeWidth={2}
-                name="Daily Spending"
+                name="Spending"
                 dot={{ fill: "#000000", r: 4 }}
                 activeDot={{ r: 6 }}
               />

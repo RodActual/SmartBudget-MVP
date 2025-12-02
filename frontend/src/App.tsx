@@ -1,15 +1,14 @@
 import "./globals.css";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebase";
-import { getDocs } from "firebase/firestore";
+import { auth, db } from "./firebase";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { ExpenseTracking } from "./components/ExpenseTracking";
 import { ChartsInsights } from "./components/ChartInsights";
-import { SettingsAlerts } from "./components/SpendingAlerts";
+import { SettingsPage } from "./components/SettingsPage";
 import { AddTransactionDialog } from "./components/AddTransactionDialog";
 import { LoginForm } from "./components/LoginForm";
-import { AlertsNotificationBell, AlertSettings } from "./components/AlertsNotificationBell";
+import { AlertsNotificationBell } from "./components/AlertsNotificationBell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut } from "lucide-react";
@@ -23,7 +22,6 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 
-import { db } from "./firebase";
 import {
   collection,
   onSnapshot,
@@ -33,7 +31,20 @@ import {
   doc,
   query,
   where,
-} from "firebase/firestore";
+  getDocs,
+  getDoc,
+  setDoc,
+}
+ from "firebase/firestore";
+
+import { 
+  updatePassword, 
+  reauthenticateWithCredential, 
+  EmailAuthProvider,
+  deleteUser 
+} from "firebase/auth";
+
+import logo from './assets/smartbudget-logo.png'; 
 
 // Types
 export interface Transaction {
@@ -47,6 +58,7 @@ export interface Transaction {
 }
 
 export interface Budget {
+  lastReset: number;
   id?: string;
   category: string;
   budgeted: number;
@@ -55,10 +67,23 @@ export interface Budget {
   userId?: string;
 }
 
+// ALERT SETTINGS INTERFACE: DEFINED LOCALLY FOR CONSISTENCY
+export interface AlertSettings {
+  budgetWarningEnabled: boolean;
+  budgetWarningThreshold: number;
+  budgetExceededEnabled: boolean;
+  largeTransactionEnabled: boolean;
+  largeTransactionAmount: number;
+  weeklyReportEnabled: boolean;
+  dismissedAlertIds: string[]; 
+}
+
+
 // Inactivity timeout (15 mins)
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
 
 export default function App() {
+  // State Initialization
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -77,20 +102,87 @@ export default function App() {
     largeTransactionEnabled: true,
     largeTransactionAmount: 500,
     weeklyReportEnabled: false,
+    dismissedAlertIds: [],
   });
 
   // Inactivity tracking
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auth listener
+  // Function to save settings to Firestore (Wrapped in useCallback)
+  const handleSaveSettings = useCallback(async () => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      const settingsRef = doc(db, "userSettings", user.uid);
+      
+      const settingsData = {
+        userName,
+        savingsGoal,
+        notificationsEnabled,
+        alertSettings,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await setDoc(settingsRef, settingsData, { merge: true });
+
+    } catch (error) {
+      console.error("Error saving settings:", error);
+    }
+  }, [user, userName, savingsGoal, notificationsEnabled, alertSettings]);
+
+  // Auth listener and initial settings load
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      if (currentUser) {
+        // Load user settings when user logs in
+        try {
+          const settingsRef = doc(db, "userSettings", currentUser.uid);
+          const settingsDoc = await getDoc(settingsRef);
+          
+          if (settingsDoc.exists()) {
+            const data = settingsDoc.data();
+            setUserName(data.userName || "User");
+            setSavingsGoal(data.savingsGoal || 0);
+            setNotificationsEnabled(data.notificationsEnabled ?? true);
+            
+            // Load alert settings including dismissedAlertIds
+            setAlertSettings(data.alertSettings || {
+              budgetWarningEnabled: true,
+              budgetWarningThreshold: 80,
+              budgetExceededEnabled: true,
+              largeTransactionEnabled: true,
+              largeTransactionAmount: 500,
+              weeklyReportEnabled: false,
+              dismissedAlertIds: [], // Default value if not found
+            });
+          }
+        } catch (error) {
+          console.error("Error loading user settings:", error);
+        }
+      }
+      
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  // Effect to persist settings when state changes
+  useEffect(() => {
+    // Only save if the user is logged in and not on the initial load/default values
+    if (user && !loading) {
+      // Small delay prevents unnecessary rapid writes when multiple states change at once
+      const handler = setTimeout(() => {
+        handleSaveSettings();
+      }, 500);
+
+      return () => clearTimeout(handler);
+    }
+  }, [user, loading, userName, savingsGoal, notificationsEnabled, alertSettings, handleSaveSettings]);
 
   // Reset inactivity timer
   const resetInactivityTimer = useCallback(() => {
@@ -207,6 +299,7 @@ export default function App() {
           budgeted: budget.budgeted,
           spent: budget.spent || 0,
           color: budget.color,
+          lastReset: budget.lastReset,
           userId: user.uid,
         };
 
@@ -300,6 +393,30 @@ export default function App() {
     }
   };
 
+  // NEW: Function to delete old transactions
+  const handleArchiveOldTransactions = async (oldTransactionIds: string[]) => {
+    if (!user) return;
+    if (oldTransactionIds.length === 0) return;
+
+    try {
+        const deletePromises = oldTransactionIds.map(id => {
+            const docRef = doc(db, "transactions", id);
+            return deleteDoc(docRef);
+        });
+
+        await Promise.all(deletePromises);
+        
+        // Update local state by filtering out the deleted transactions
+        setTransactions(prev => prev.filter(t => !oldTransactionIds.includes(t.id)));
+
+        alert(`Successfully deleted ${oldTransactionIds.length} transactions older than 90 days.`);
+
+    } catch (error) {
+        console.error("Error deleting old transactions:", error);
+        alert("Failed to delete old transactions. Please try again.");
+    }
+  };
+
   const openEditDialog = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setDialogOpen(true);
@@ -315,18 +432,94 @@ export default function App() {
     setDialogOpen(true);
   };
 
-  const handleSaveSettings = async () => {
-    if (!user) return;
+  // Update user password
+  const handleUpdatePassword = async (currentPassword: string, newPassword: string) => {
+    if (!user) return { success: false, error: "No user logged in" };
 
     try {
-      const settingsRef = doc(db, "userSettings", user.uid);
-      await updateDoc(settingsRef, {
-        userName,
-        savingsGoal,
-        notificationsEnabled,
-      });
-    } catch (error) {
-      console.error("Error saving settings:", error);
+      // Reauthenticate user first
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, newPassword);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      let errorMessage = "Failed to update password";
+      
+      if (error.code === "auth/wrong-password") {
+        errorMessage = "Current password is incorrect";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Password is too weak";
+      } else if (error.code === "auth/invalid-credential") {
+        errorMessage = "Current password is incorrect";
+      }
+      
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  // Delete user account and all data
+  const handleDeleteAccount = async (password: string) => {
+    if (!user) return { success: false, error: "No user logged in" };
+
+    try {
+      // Reauthenticate user first
+      const credential = EmailAuthProvider.credential(user.email!, password);
+      await reauthenticateWithCredential(user, credential);
+
+      // Delete all user data from Firestore
+      const userId = user.uid;
+
+      // Delete all transactions
+      const transactionsQuery = query(
+        collection(db, "transactions"),
+        where("userId", "==", userId)
+      );
+      const transactionsSnapshot = await getDocs(transactionsQuery);
+      const transactionDeletes = transactionsSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(transactionDeletes);
+
+      // Delete all budgets
+      const budgetsQuery = query(
+        collection(db, "budgets"),
+        where("userId", "==", userId)
+      );
+      const budgetsSnapshot = await getDocs(budgetsQuery);
+      const budgetDeletes = budgetsSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      await Promise.all(budgetDeletes);
+
+      // Delete user settings
+      try {
+        const settingsRef = doc(db, "userSettings", userId);
+        await deleteDoc(settingsRef);
+      } catch (e) {
+        // Settings might not exist, that's okay
+      }
+
+      // Delete the user account
+      await deleteUser(user);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      let errorMessage = "Failed to delete account";
+      
+      if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password";
+      } else if (error.code === "auth/requires-recent-login") {
+        errorMessage = "Please log out and log back in before deleting your account";
+      } else if (error.code === "auth/invalid-credential") {
+        errorMessage = "Incorrect password";
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -344,7 +537,11 @@ export default function App() {
         {/* Header */}
         <div className="flex items-center justify-between bg-gray-200 rounded-lg shadow-md p-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-black">SmartBudget</h1>
+            {/* LOGO */}
+            <div className="flex items-center">
+              <h1 className="text-2xl sm:text-3xl font-bold text-black">SmartBudget</h1>
+              <img src={logo} alt="SmartBudget Logo" className="h-10 w-auto mr-3" />
+            </div>
             <p className="text-sm text-black mt-1">Your personal finance manager</p>
           </div>
           <div className="flex items-center gap-2">
@@ -399,6 +596,7 @@ export default function App() {
               onOpenAddTransaction={openAddTransactionDialog}
               onEdit={openEditDialog}
               onDelete={handleDeleteTransaction}
+              onArchiveOldTransactions={handleArchiveOldTransactions}
             />
           </TabsContent>
 
@@ -411,16 +609,15 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">
-            <SettingsAlerts
+            <SettingsPage
               budgets={budgets}
               transactions={transactions}
               userName={userName}
               onUpdateUserName={setUserName}
               savingsGoal={savingsGoal}
               onUpdateSavingsGoal={setSavingsGoal}
-              notificationsEnabled={notificationsEnabled}
-              onUpdateNotifications={setNotificationsEnabled}
-              onSaveSettings={handleSaveSettings}
+              onUpdatePassword={handleUpdatePassword}
+              onDeleteAccount={handleDeleteAccount}
             />
           </TabsContent>
         </Tabs>
