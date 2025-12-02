@@ -17,7 +17,7 @@ import {
 import type { Budget, Transaction } from "../App";
 
 interface ChartsInsightsProps {
-  budgets: Budget[];
+  budgets: Budget[]; // Now contains the current month's calculated 'spent' amount
   transactions: Transaction[];
   onUpdateBudgets: (budgets: Budget[]) => void;
 }
@@ -34,21 +34,7 @@ export function ChartsInsights({
   transactions,
   onUpdateBudgets,
 }: ChartsInsightsProps) {
-  // Calculate spending by category from transactions (case-insensitive)
-  const spendingByCategory = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((acc, transaction) => {
-      const category = transaction.category.toLowerCase();
-      acc[category] = (acc[category] || 0) + transaction.amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-  console.log("=== CHART DEBUG ===");
-  console.log("Total transactions:", transactions.length);
-  console.log("Expense transactions:", transactions.filter(t => t.type === "expense").length);
-  console.log("Spending by category:", spendingByCategory);
-  console.log("Budgets:", budgets);
-
+    
   // Define default colors for categories
   const defaultColors: Record<string, string> = {
     housing: "#3B82F6",
@@ -63,25 +49,18 @@ export function ChartsInsights({
   };
 
   // Prepare category spending data for charts
-  // If budgets exist, use them; otherwise create from transaction categories
-  const categoryData = budgets.length > 0
-    ? budgets
+  // Use the 'spent' value calculated in App.tsx (which is passed as budget.spent)
+  const categoryData = budgets
         .map((budget) => ({
           name: budget.category,
-          value: spendingByCategory[budget.category.toLowerCase()] || budget.spent || 0,
+          value: budget.spent, // Monthly calculated spent amount
           color: budget.color,
           budget: budget.budgeted,
         }))
-        .filter((item) => item.value > 0)
-    : Object.entries(spendingByCategory).map(([category, amount]) => ({
-        name: category.charAt(0).toUpperCase() + category.slice(1), // Capitalize first letter
-        value: amount,
-        color: defaultColors[category.toLowerCase()] || "#9CA3AF",
-        budget: 0, // No budget set
-      }));
-
-  console.log("Category data for charts:", categoryData);
-  console.log("===================");
+        .filter((item) => item.budget > 0 || item.value > 0); 
+    
+    // Strict filter for Pie Chart. Only display categories where value > 0 (spent amount).
+    const pieChartData = categoryData.filter(item => item.value > 0);
 
   // Custom tooltip for charts
   const CustomTooltip = ({
@@ -99,7 +78,7 @@ export function ChartsInsights({
           <p className="text-sm text-gray-600">
             Spent: ${data.value.toFixed(2)}
           </p>
-          {data.budget !== undefined && (
+          {data.budget !== undefined && data.budget > 0 && (
             <p className="text-xs text-gray-500">
               Budget: ${data.budget.toFixed(2)}
             </p>
@@ -151,23 +130,26 @@ export function ChartsInsights({
               <CardHeader>
                 <CardTitle>Spending by Category</CardTitle>
                 <CardDescription>
-                  Distribution of expenses across categories
+                  Distribution of expenses across categories (Current Month)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {categoryData.length > 0 ? (
+                {pieChartData.length > 0 ? (
                   <div style={{ width: '100%', minHeight: '300px' }}>
                     <ResponsiveContainer width="100%" height={300} minWidth={0}>
                       <PieChart>
                         <Pie
-                          data={categoryData}
+                          // Use pieChartData which strictly filters where value > 0
+                          data={pieChartData} 
                           cx="50%"
                           cy="50%"
                           outerRadius={80}
                           dataKey="value"
-                          label={(entry) => `${entry.name}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
+                          // Only display label if percentage is greater than 0
+                          label={(entry) => (entry.percent || 0) > 0 ? `${entry.name}: ${((entry.percent || 0) * 100).toFixed(0)}%` : null}
                         >
-                          {categoryData.map((entry, index) => (
+                          {/* Use pieChartData for cells */}
+                          {pieChartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -177,7 +159,7 @@ export function ChartsInsights({
                   </div>
                 ) : (
                   <div className="py-12 text-center text-gray-500">
-                    No data available
+                    No spending data for the current month.
                   </div>
                 )}
               </CardContent>
@@ -188,7 +170,7 @@ export function ChartsInsights({
               <CardHeader>
                 <CardTitle>Budget vs Actual</CardTitle>
                 <CardDescription>
-                  Compare budgeted amounts with actual spending
+                  Compare budgeted amounts with actual spending (Current Month)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -199,21 +181,19 @@ export function ChartsInsights({
                         data={categoryData}
                         margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                       >
-                        {/* NEW: SVG Definition for Striped Pattern */}
-                        <defs>
-                            <pattern id="pattern-stripe" 
-                                x="0" y="0" 
-                                width="8" height="8" 
-                                patternUnits="userSpaceOnUse" 
-                                patternTransform="rotate(45)"
-                            >
-                                {/* Background color of the stripe (light grey) */}
-                                <rect x="0" y="0" width="8" height="8" fill="#D1D5DB" /> 
-                                {/* Stripe color (darker grey line) */}
-                                <line x1="0" y1="0" x2="0" y2="8" stroke="#9CA3AF" strokeWidth="3" />
-                            </pattern>
-                        </defs>
-                        
+                        {/* SVG Definition for Striped Pattern */}
+                        <defs>
+                            <pattern id="pattern-stripe" 
+                                x="0" y="0" 
+                                width="8" height="8" 
+                                patternUnits="userSpaceOnUse" 
+                                patternTransform="rotate(45)"
+                            >
+                                <rect x="0" y="0" width="8" height="8" fill="#D1D5DB" /> 
+                                <line x1="0" y1="0" x2="0" y2="8" stroke="#9CA3AF" strokeWidth="3" />
+                            </pattern>
+                        </defs>
+                        
                         <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
                         <XAxis
                           dataKey="name"
@@ -228,13 +208,13 @@ export function ChartsInsights({
                         <Legend />
                         {budgets.length > 0 && (
                           <Bar 
-                                dataKey="budget" 
-                                fill="url(#pattern-stripe)" 
-                                name="Budget" 
-                                barSize={40} 
-                            />
+                                dataKey="budget" 
+                                fill="url(#pattern-stripe)" 
+                                name="Budget" 
+                                barSize={40} 
+                            />
                         )}
-                        {/* MODIFIED: Spent bar remains solid */}
+                        {/* Spent bar remains solid */}
                         <Bar dataKey="value" name="Spent" barSize={40}>
                           {categoryData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />

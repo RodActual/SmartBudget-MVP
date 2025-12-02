@@ -1,5 +1,5 @@
 import "./globals.css";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { DashboardOverview } from "./components/DashboardOverview";
@@ -46,7 +46,7 @@ import {
 
 import logo from './assets/smartbudget-logo.png'; 
 
-// Types
+// Types (omitted for brevity, assume they are the same)
 export interface Transaction {
   id: string;
   date: string;
@@ -67,7 +67,6 @@ export interface Budget {
   userId?: string;
 }
 
-// ALERT SETTINGS INTERFACE: DEFINED LOCALLY FOR CONSISTENCY
 export interface AlertSettings {
   budgetWarningEnabled: boolean;
   budgetWarningThreshold: number;
@@ -82,12 +81,27 @@ export interface AlertSettings {
 // Inactivity timeout (15 mins)
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
 
+// NEW HELPER FUNCTION
+/**
+ * Returns the date string (YYYY-MM-DD) for the 1st day of the current month
+ * to be used as the start of the current budget period.
+ */
+const getCurrentMonthStartDate = () => {
+    const now = new Date();
+    // Set to the 1st day of the month
+    now.setDate(1); 
+    // Reset time to 00:00:00 to include the entire day
+    now.setHours(0, 0, 0, 0); 
+    return now.toISOString().substring(0, 10); // "YYYY-MM-DD"
+};
+
+
 export default function App() {
   // State Initialization
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]); // This holds the base budget data
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [userName, setUserName] = useState("User");
@@ -266,7 +280,17 @@ export default function App() {
       (snapshot) => {
         const budgetData: Budget[] = [];
         snapshot.forEach((doc) => {
-          budgetData.push({ id: doc.id, ...doc.data() } as Budget);
+          // IMPORTANT: Do not read 'spent' from Firestore here, as it's now dynamically calculated.
+          // Only read the base budget amount, category, and color.
+          budgetData.push({ 
+             id: doc.id,
+             category: doc.data().category,
+             budgeted: doc.data().budgeted,
+             color: doc.data().color,
+             lastReset: doc.data().lastReset || new Date(0).getTime(), // Ensure lastReset exists
+             spent: 0, // Spent is always calculated, not stored
+             userId: doc.data().userId
+          } as Budget);
         });
         setBudgets(budgetData);
       },
@@ -278,6 +302,37 @@ export default function App() {
       unsubscribeBudgets();
     };
   }, [user]);
+
+  // NEW: MEMOIZED CALCULATION OF CURRENT MONTH BUDGETS
+  const currentBudgets = useMemo(() => {
+      if (!user) return [];
+
+      // 1. Determine the start of the current budget period (1st of the month)
+      const startOfCurrentMonth = getCurrentMonthStartDate();
+      
+      // 2. Filter and sum expenses for the current period
+      const spentByCategory: { [key: string]: number } = {};
+      
+      // Filter for expenses that occurred during the current budget cycle (since the 1st of the month)
+      const currentExpenses = transactions.filter(t => 
+          t.type === 'expense' && t.date >= startOfCurrentMonth
+      );
+      
+      currentExpenses.forEach(t => {
+          spentByCategory[t.category] = (spentByCategory[t.category] || 0) + t.amount;
+      });
+      
+      // 3. Map the base budgets to include the calculated 'spent' amount
+      return budgets.map(budget => {
+          const spent = spentByCategory[budget.category] || 0;
+          return {
+              ...budget,
+              spent: spent, // The dynamically calculated spent amount
+          };
+      });
+
+  }, [budgets, transactions, user]);
+
 
   // Budget update handler
   const handleUpdateBudgets = async (newBudgets: Budget[]) => {
@@ -297,7 +352,7 @@ export default function App() {
         const budgetData = {
           category: budget.category,
           budgeted: budget.budgeted,
-          spent: budget.spent || 0,
+          // REMOVED 'spent' from data saved to Firestore, as it is dynamically calculated.
           color: budget.color,
           lastReset: budget.lastReset,
           userId: user.uid,
@@ -306,6 +361,7 @@ export default function App() {
         if (budget.id && existingBudgetIds.includes(budget.id)) {
           // Update existing budget
           const budgetRef = doc(db, "budgets", budget.id);
+          // Omit the spent property when updating
           await updateDoc(budgetRef, budgetData);
         } else {
           // Add new budget
@@ -393,7 +449,7 @@ export default function App() {
     }
   };
 
-  // NEW: Function to delete old transactions
+  // Function to delete old transactions
   const handleArchiveOldTransactions = async (oldTransactionIds: string[]) => {
     if (!user) return;
     if (oldTransactionIds.length === 0) return;
@@ -532,6 +588,7 @@ export default function App() {
   );
 
   return (
+ 
     <div className="min-h-screen bg-white">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
@@ -581,8 +638,9 @@ export default function App() {
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
+            {/* UPDATED: Pass currentBudgets */}
             <DashboardOverview
-              budgets={budgets}
+              budgets={currentBudgets}
               transactions={transactions}
               onOpenAddTransaction={openAddTransactionDialog}
               userName={userName}
@@ -601,8 +659,9 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="insights" className="mt-6">
+            {/* UPDATED: Pass currentBudgets */}
             <ChartsInsights
-              budgets={budgets}
+              budgets={currentBudgets}
               transactions={transactions}
               onUpdateBudgets={handleUpdateBudgets}
             />

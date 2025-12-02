@@ -15,9 +15,9 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { Budget } from "../App";
 
 interface BudgetManagerProps {
-  budgets: Budget[];
+  budgets: Budget[]; // This now contains the current month's calculated 'spent' amount from App.tsx
   onUpdateBudgets: (budgets: Budget[]) => void;
-  transactions: any[];
+  transactions: any[]; // Kept for reference but not used for spent calculation
 }
 
 const DEFAULT_COLORS = [
@@ -48,23 +48,20 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
   const [budgetAmount, setBudgetAmount] = useState("");
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
 
-  const [lastReset, setLastReset] = useState<{ month: number, year: number } | null>(null);
-  
+  // Removed local lastReset state and local spending calculation functions.
 
   // Initialize budgets with default values on first load
   useEffect(() => {
-    // Only initialize if there are no budgets
     if (budgets.length === 0) {
       const initialBudgets: Budget[] = INITIAL_BUDGETS.map((b, index) => ({
         id: `budget_initial_${index}`,
         category: b.category,
         budgeted: b.budgeted,
         spent: 0,
-        lastReset: Date.now(), // Set initial reset time
+        lastReset: Date.now(),
         color: b.color,
       }));
       
-      // Small delay to prevent infinite loop
       const timer = setTimeout(() => {
         onUpdateBudgets(initialBudgets);
       }, 100);
@@ -73,66 +70,43 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
     }
   }, [budgets]);
 
-  // Monthly Reset Logic - FIXED DEPENDENCY ARRAY
+  // Monthly Reset Logic (No changes needed, as this relies on the correct budget structure)
   useEffect(() => {
-    // Only proceed if we have budgets loaded
     if (budgets.length === 0) return;
 
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
 
-    // Safely get the last reset timestamp from the first budget (assuming all are synchronized)
     const lastUpdateTimestamp = budgets[0].lastReset || 0;
     const lastResetDate = new Date(lastUpdateTimestamp);
     
     const lastResetMonth = lastResetDate.getMonth();
     const lastResetYear = lastResetDate.getFullYear();
 
-    // Check if a new month/year has started
     if (currentMonth !== lastResetMonth || currentYear !== lastResetYear) {
         
-        // 1. Create the new updated budget list with spent: 0
         const updatedBudgets = budgets.map(budget => ({
             ...budget,
             spent: 0, 
-            lastReset: Date.now(), // Update the lastReset timestamp
+            lastReset: Date.now(),
         }));
 
-        // 2. Save the reset budgets (triggers Firebase save)
         onUpdateBudgets(updatedBudgets);
         
         console.log(`Budgets reset for new period: ${currentMonth + 1}/${currentYear}`);
     }
-    
   }, [budgets, onUpdateBudgets]);
 
-
-  // Calculate spending for each budget - MODIFIED to use lastReset timestamp
-  const getBudgetWithSpending = (budget: Budget) => {
-    // Determine the cutoff date based on the budget's lastReset time
-    const resetTimestamp = budget.lastReset || 0; 
-    
-    const spent = transactions
-      .filter(t => t.type === "expense" && 
-            t.category.toLowerCase() === budget.category.toLowerCase() &&
-            // Core filter logic: Transaction must be ON OR AFTER the last reset timestamp
-            new Date(t.date).getTime() >= resetTimestamp
-        )
-      .reduce((sum, t) => sum + t.amount, 0);
-    
-    return { ...budget, spent };
-  };
-
-  // Use the calculated spending for display purposes
-  const budgetsWithSpending = budgets.map(getBudgetWithSpending);
+  // FIX: Use the budgets prop directly for display.
+  const budgetsForDisplay = budgets;
 
   const openAddDialog = () => {
     setEditingBudget(null);
     setCategory("");
     setBudgetAmount("");
-    // Find first available color that's not in use
-    const usedColors = budgets.map(b => b.color);
+    
+    const usedColors = budgetsForDisplay.map(b => b.color);
     const availableColor = DEFAULT_COLORS.find(c => !usedColors.includes(c)) || DEFAULT_COLORS[0];
     setSelectedColor(availableColor);
     setDialogOpen(true);
@@ -152,8 +126,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
       return;
     }
 
-    // Check if selected color is already in use by another budget
-    const colorInUse = budgets.find(
+    const colorInUse = budgetsForDisplay.find(
       b => b.color === selectedColor && b.id !== editingBudget?.id
     );
     
@@ -163,14 +136,12 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
     }
 
     const currentTime = Date.now();
-    // New budget definition needs to include the lastReset field.
     const newBudget: Budget = {
       id: editingBudget?.id || `budget_${currentTime}`,
       category: category.trim(),
       budgeted: parseFloat(budgetAmount),
-      // When saving/editing, use the most current calculated 'spent' amount, 
-      // or 0 if a new budget. This ensures the persistent 'spent' amount reflects the current period.
-      spent: editingBudget ? budgetsWithSpending.find(b => b.id === editingBudget.id)?.spent || 0 : 0, 
+      // Set spent to 0 for a new budget, otherwise take the calculated spent amount for local consistency
+      spent: editingBudget ? budgetsForDisplay.find(b => b.id === editingBudget.id)?.spent || 0 : 0, 
       color: selectedColor,
       // Maintain last reset date for existing budget, or set current time for new budget
       lastReset: editingBudget?.lastReset || currentTime, 
@@ -178,13 +149,13 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
 
     if (editingBudget) {
       // Update existing budget
-      const updatedBudgets = budgets.map(b => 
+      const updatedBudgets = budgetsForDisplay.map(b => 
         b.id === editingBudget.id ? newBudget : b
       );
       onUpdateBudgets(updatedBudgets);
     } else {
       // Add new budget
-      onUpdateBudgets([...budgets, newBudget]);
+      onUpdateBudgets([...budgetsForDisplay, newBudget]);
     }
 
     setDialogOpen(false);
@@ -192,12 +163,12 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
 
   const handleDelete = (budgetId: string) => {
     if (confirm("Are you sure you want to delete this budget category?")) {
-      onUpdateBudgets(budgets.filter(b => b.id !== budgetId));
+      onUpdateBudgets(budgetsForDisplay.filter(b => b.id !== budgetId));
     }
   };
 
-  const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
-  const totalSpent = budgetsWithSpending.reduce((sum, b) => sum + b.spent, 0);
+  const totalBudget = budgetsForDisplay.reduce((sum, b) => sum + b.budgeted, 0);
+  const totalSpent = budgetsForDisplay.reduce((sum, b) => sum + b.spent, 0);
 
   return (
     <>
@@ -217,7 +188,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
           </div>
         </CardHeader>
         <CardContent>
-          {budgets.length === 0 ? (
+          {budgetsForDisplay.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500 mb-4">
                 Loading default budgets...
@@ -243,7 +214,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
 
               {/* Budget List */}
               <div className="space-y-4">
-                {budgetsWithSpending.map((budget) => {
+                {budgetsForDisplay.map((budget) => {
                   const percentage = (budget.spent / budget.budgeted) * 100;
                   const isOverBudget = budget.spent > budget.budgeted;
                   
