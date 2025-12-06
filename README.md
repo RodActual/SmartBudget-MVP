@@ -4,7 +4,7 @@ A modern, privacy-first budgeting application built for students and young profe
 
 ## Overview
 
-SmartBudget is a completely free, full-featured budgeting tool that helps you track expenses, set budgets, and visualize spending patterns—without ads, subscriptions, or data monetization. Built with React and Firebase, it provides real-time synchronization and intelligent insights to help you make better financial decisions.
+SmartBudget is a completely free, full-featured budgeting tool that helps you track expenses, set budgets, and visualize spending patterns, without ads, subscriptions, or data monetization. Built with React and Firebase, it provides real-time synchronization and intelligent insights to help you make better financial decisions.
 
 **Live Demo:** <https://smartbudget-mvp.vercel.app>
 
@@ -154,20 +154,20 @@ git clone https://github.com/yourusername/smartbudget.git
 cd smartbudget/frontend
 ```
 
-1. **Install dependencies**
+2. **Install dependencies**
 
 ```bash
 npm install
 ```
 
-1. **Set up Firebase**
+3. **Set up Firebase**
 
 - Create a new Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
 - Enable **Authentication** (Email/Password provider)
 - Enable **Firestore Database** (production mode)
 - Copy your Firebase config
 
-1. **Configure environment variables**
+4. **Configure environment variables**
 
 Create a `.env` file in the `frontend/` directory:
 
@@ -181,7 +181,7 @@ VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ```
 
-1. **Set up Firestore security rules**
+5. **Set up Firestore security rules**
 
 In Firebase Console → Firestore Database → Rules, paste:
 
@@ -213,7 +213,7 @@ service cloud.firestore {
 }
 ```
 
-1. **Run development server**
+6. **Run development server**
 
 ```bash
 npm run dev
@@ -287,11 +287,11 @@ npm run preview  # Test production build locally
 ### Data Flow
 
 1. **User logs in** → Firebase Auth creates session
-1. **App loads** → onSnapshot listeners subscribe to user’s data
-1. **User adds transaction** → addDoc to Firestore
-1. **Firestore updates** → onSnapshot fires → React re-renders
-1. **Budget calculation** → Client-side aggregation of current month’s transactions
-1. **Alerts generated** → Compared against alertSettings, filtered by dismissedAlertIds
+2. **App loads** → onSnapshot listeners subscribe to user’s data
+3. **User adds transaction** → addDoc to Firestore
+4. **Firestore updates** → onSnapshot fires → React re-renders
+5. **Budget calculation** → Client-side aggregation of current month’s transactions
+6. **Alerts generated** → Compared against alertSettings, filtered by dismissedAlertIds
 
 ## Design Philosophy
 
