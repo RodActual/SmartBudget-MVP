@@ -352,7 +352,6 @@ export default function App() {
         const budgetData = {
           category: budget.category,
           budgeted: budget.budgeted,
-          // REMOVED 'spent' from data saved to Firestore, as it is dynamically calculated.
           color: budget.color,
           lastReset: budget.lastReset,
           userId: user.uid,
@@ -638,7 +637,6 @@ export default function App() {
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
-            {/* UPDATED: Pass currentBudgets */}
             <DashboardOverview
               budgets={currentBudgets}
               transactions={transactions}
@@ -659,7 +657,6 @@ export default function App() {
           </TabsContent>
 
           <TabsContent value="insights" className="mt-6">
-            {/* UPDATED: Pass currentBudgets */}
             <ChartsInsights
               budgets={currentBudgets}
               transactions={transactions}
