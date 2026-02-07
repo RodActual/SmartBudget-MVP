@@ -1,248 +1,245 @@
-// frontend/src/components/LoginForm.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
+import { auth, db } from "../firebase"; 
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Alert, AlertDescription } from "../ui/alert";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  sendEmailVerification 
-} from "firebase/auth";
-import { auth, db } from "../firebase"; // Ensure db is imported if you create user docs
-import { doc, setDoc } from "firebase/firestore"; // Import setDoc for user creation
-import { AlertCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface LoginFormProps {
-  onLogin: (uid: string) => void;
+  onLogin: () => void;
+  initialIsSignUp?: boolean; 
 }
 
-export function LoginForm({ onLogin }: LoginFormProps) {
+export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) {
+  const [isSignUp, setIsSignUp] = useState(initialIsSignUp);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); 
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  useEffect(() => {
+    setIsSignUp(initialIsSignUp);
+  }, [initialIsSignUp]);
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
     setLoading(true);
 
-    try {
-      // 1. Authenticate with Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+    if (isSignUp && password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
 
-      // REMOVED: The check for (!user.emailVerified) followed by signOut().
-      // REASON: We want the user to stay logged in so App.tsx can show the "Verify Email" screen.
-      
-      onLogin(user.uid);
-    } catch (err: any) {
-      console.error("Login error:", err);
-      let errorMessage = "Login failed.";
-      
-      if (err.code === "auth/invalid-email") {
-        errorMessage = "Invalid email address.";
-      } else if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
-        errorMessage = "Invalid email or password.";
-      } else if (err.code === "auth/invalid-credential") {
-        errorMessage = "Invalid email or password.";
-      } else if (err.code === "auth/too-many-requests") {
-        errorMessage = "Too many failed attempts. Please try again later.";
+    try {
+      if (isSignUp) {
+        // Sign Up Logic
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "userSettings", user.uid), {
+          userName: email.split("@")[0],
+          savingsGoal: 0,
+          notificationsEnabled: true,
+          alertSettings: {
+            budgetWarningEnabled: true,
+            budgetWarningThreshold: 80,
+            budgetExceededEnabled: true,
+            largeTransactionEnabled: true,
+            largeTransactionAmount: 500,
+            weeklyReportEnabled: false,
+            dismissedAlertIds: [],
+          },
+          updatedAt: new Date().toISOString(),
+        });
+
+        await sendEmailVerification(user);
+
+        setSuccessMessage("Account created! Please check your email to verify your account.");
+      } else {
+        // Sign In Logic
+        await signInWithEmailAndPassword(auth, email, password);
+        onLogin();
       }
-      
-      setError(errorMessage);
+    } catch (err: any) {
+      console.error(err);
+      let msg = "Authentication failed";
+      if (err.code === "auth/email-already-in-use") msg = "Email already in use";
+      if (err.code === "auth/invalid-email") msg = "Invalid email address";
+      if (err.code === "auth/weak-password") msg = "Password should be at least 6 characters";
+      if (err.code === "auth/wrong-password") msg = "Invalid password";
+      if (err.code === "auth/user-not-found") msg = "User not found";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignIn = async () => {
     setError("");
-
-    // Validation
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
     setLoading(true);
-
     try {
-      // 1. Create user account
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-      // 2. Create User Document in Firestore (Best Practice)
-      // This ensures the user exists in your DB even if they haven't verified yet
-      try {
-        await setDoc(doc(db, "userSettings", user.uid), {
-            userName: email.split("@")[0],
-            email: email,
-            createdAt: new Date().toISOString(),
-            notificationsEnabled: true,
-            savingsGoal: 0,
-            alertSettings: {
-                budgetWarningEnabled: true,
-                budgetWarningThreshold: 80,
-                budgetExceededEnabled: true,
-                largeTransactionEnabled: true,
-                largeTransactionAmount: 500,
-                weeklyReportEnabled: false,
-                dismissedAlertIds: [],
-            }
+      const docRef = doc(db, "userSettings", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        await setDoc(docRef, {
+          userName: user.displayName || user.email?.split("@")[0] || "User",
+          savingsGoal: 0,
+          notificationsEnabled: true,
+          alertSettings: {
+            budgetWarningEnabled: true,
+            budgetWarningThreshold: 80,
+            budgetExceededEnabled: true,
+            largeTransactionEnabled: true,
+            largeTransactionAmount: 500,
+            weeklyReportEnabled: false,
+            dismissedAlertIds: [],
+          },
+          updatedAt: new Date().toISOString(),
         });
-      } catch (docError) {
-          console.error("Error creating user settings doc:", docError);
-          // We don't block the UI here, but logging it is important
       }
-
-      // 3. Send verification email
-      await sendEmailVerification(user, {
-        url: window.location.origin,
-        handleCodeInApp: false,
-      });
-
-      // 4. IMPORTANT: Do NOT sign out here either. 
-      // Let them fall through to the "Restricted View" in App.tsx
-      // where they can read the instruction to check their email.
-      
-      // Optional: You can still show an alert if you prefer
-      alert("Account created! Please check your email to verify your account.");
-
-      // No need to switch mode, App.tsx will detect the user and unmount LoginForm
-      
+      onLogin();
     } catch (err: any) {
-      console.error("Sign up error:", err);
-      let errorMessage = "Sign up failed.";
-      
-      if (err.code === "auth/weak-password") {
-        errorMessage = "Password should be at least 6 characters.";
-      } else if (err.code === "auth/email-already-in-use") {
-        errorMessage = "Email is already in use. Try logging in instead.";
-      } else if (err.code === "auth/invalid-email") {
-        errorMessage = "Invalid email address.";
-      } else if (err.code === "auth/operation-not-allowed") {
-        errorMessage = "Email/password accounts are not enabled. Please contact support.";
-      }
-      
-      setError(errorMessage);
-      setLoading(false); // Only stop loading if there was an error
+      setError("Google Sign In failed. Please try again.");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const toggleMode = () => {
-    setIsSignUp(!isSignUp);
-    setError("");
-    setPassword("");
-    setConfirmPassword("");
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-        </div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">
+            {isSignUp ? "Create an account" : "Welcome back"}
+          </CardTitle>
+          <CardDescription className="text-center">
+            {isSignUp ? "Enter your email below to create your account" : "Enter your email below to login to your account"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={isSignUp ? "signup" : "login"} onValueChange={(val) => setIsSignUp(val === "signup")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            
+            <form onSubmit={handleAuth}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="m@example.com" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required 
+                  />
+                </div>
+                
+                {isSignUp && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input 
+                      id="confirmPassword" 
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required 
+                    />
+                  </div>
+                )}
 
-        {/* Title */}
-        <h2 className="text-2xl font-bold text-center mb-2 text-gray-900">
-          {isSignUp ? "Create Account" : "Welcome Back"}
-        </h2>
-        <p className="text-center text-gray-600 mb-6">
-          {isSignUp 
-            ? "Sign up to start managing your finances" 
-            : "Sign in to your SmartBudget account"}
-        </p>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-        {/* Error Alert */}
-        {error && (
-          <Alert className="mb-4 border-red-500 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">{error}</AlertDescription>
-          </Alert>
-        )}
+                {successMessage && (
+                  <Alert className="bg-green-50 text-green-700 border-green-200">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertTitle>Success</AlertTitle>
+                    <AlertDescription>{successMessage}</AlertDescription>
+                  </Alert>
+                )}
 
-        {/* Form */}
-        <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
+                {/* FORCE WHITE TEXT */}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-black hover:bg-gray-800" 
+                  style={{ color: "white" }}
+                  disabled={loading}
+                >
+                  {loading ? "Processing..." : (isSignUp ? "Create Account" : "Sign In")}
+                </Button>
+              </div>
+            </form>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              minLength={6}
-            />
-            {isSignUp && (
-              <p className="text-xs text-gray-500">
-                Must be at least 6 characters
-              </p>
-            )}
-          </div>
-
-          {isSignUp && (
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={loading}
-                minLength={6}
-              />
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
+              </div>
             </div>
-          )}
 
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={loading}
-          >
-            {loading ? "Processing..." : (isSignUp ? "Sign Up" : "Login")}
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <Button 
-            variant="link" 
-            onClick={toggleMode}
-            disabled={loading}
-            className="text-sm text-gray-600 hover:text-gray-800"
-          >
-            {isSignUp 
-              ? "Already have an account? Log in" 
-              : "Need an account? Sign up"}
-          </Button>
-        </div>
-      </div>
+            <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Google
+            </Button>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+            {/* Footer content if needed */}
+        </CardFooter>
+      </Card>
     </div>
   );
 }

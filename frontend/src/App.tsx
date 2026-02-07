@@ -10,9 +10,10 @@ import { AddTransactionDialog } from "./components/AddTransactionDialog";
 import { LoginForm } from "./components/LoginForm";
 import { AlertsNotificationBell } from "./components/AlertsNotificationBell";
 import { LiteraturePage } from "./components/LiteraturePage"; 
+import { LandingPage } from "./components/LandingPage"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
-import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen } from "lucide-react"; // Added BookOpen
+import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft } from "lucide-react"; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,6 +100,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   
+  // UPDATED: Authentication Mode State
+  // 'landing' = Public Home Page
+  // 'login' = Sign In Form
+  // 'signup' = Create Account Form
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup'>('landing');
+
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
     budgetWarningEnabled: true,
     budgetWarningThreshold: 80,
@@ -338,6 +345,7 @@ export default function App() {
       setUserName("User");
       setSavingsGoal(0);
       setActiveTab("dashboard");
+      setAuthMode('landing'); // Reset to landing page on logout
       if (isAutoLogout) alert("You have been logged out due to inactivity.");
     } catch (error) {
       console.error("Logout error:", error);
@@ -464,10 +472,36 @@ export default function App() {
     );
   }
 
+  // --- UNAUTHENTICATED ROUTING ---
   if (!user) {
-    return <LoginForm onLogin={() => {}} />;
+    // If user clicked "Sign In" or "Get Started"
+    if (authMode === 'login' || authMode === 'signup') {
+      return (
+        <div className="relative min-h-screen bg-white">
+          <div className="absolute top-4 left-4 z-10">
+             <Button variant="ghost" onClick={() => setAuthMode('landing')} className="text-gray-600 hover:text-black">
+               <ArrowLeft className="mr-2 h-4 w-4" />
+               Back
+             </Button>
+          </div>
+          <LoginForm 
+            onLogin={() => {}} 
+            initialIsSignUp={authMode === 'signup'} // Open correct tab
+          />
+        </div>
+      );
+    }
+    
+    // Default: Public Landing Page
+    return (
+      <LandingPage 
+        onGetStarted={() => setAuthMode('signup')} 
+        onSignIn={() => setAuthMode('login')} 
+      />
+    );
   }
 
+  // --- AUTHENTICATED APP ---
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
@@ -511,7 +545,6 @@ export default function App() {
         {user?.emailVerified ? (
           <>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              {/* UPDATED: grid-cols-5 to accommodate the new Learn tab */}
               <TabsList className="grid w-full grid-cols-5 bg-gray-100 h-auto sm:h-10">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
@@ -525,7 +558,6 @@ export default function App() {
                   <BarChart3 className="h-4 w-4" />
                   <span className="hidden sm:inline">Insights</span>
                 </TabsTrigger>
-                {/* NEW TAB */}
                 <TabsTrigger value="learn" className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
                   <span className="hidden sm:inline">Learn</span>
@@ -564,7 +596,6 @@ export default function App() {
                 />
               </TabsContent>
 
-              {/* NEW CONTENT */}
               <TabsContent value="learn" className="mt-6">
                 <LiteraturePage />
               </TabsContent>
@@ -592,7 +623,6 @@ export default function App() {
             />
           </>
         ) : (
-          // Restricted Access View
           <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl mt-6">
             <div className="max-w-md mx-auto space-y-4">
               <div className="text-6xl animate-bounce">📧</div>
