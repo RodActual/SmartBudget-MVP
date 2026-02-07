@@ -9,9 +9,10 @@ import { SettingsPage } from "./components/SettingsPage";
 import { AddTransactionDialog } from "./components/AddTransactionDialog";
 import { LoginForm } from "./components/LoginForm";
 import { AlertsNotificationBell } from "./components/AlertsNotificationBell";
+import { LiteraturePage } from "./components/LiteraturePage"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
-import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen } from "lucide-react"; // Added BookOpen
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,7 +87,6 @@ const getCurrentMonthStartDate = () => {
 };
 
 export default function App() {
-  // State Initialization
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -98,6 +98,7 @@ export default function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
     budgetWarningEnabled: true,
     budgetWarningThreshold: 80,
@@ -141,7 +142,6 @@ export default function App() {
       setUser(currentUser);
       
       if (currentUser) {
-        // Check verification status
         setShowVerificationBanner(!currentUser.emailVerified);
 
         try {
@@ -434,7 +434,6 @@ export default function App() {
       const credential = EmailAuthProvider.credential(user.email!, password);
       await reauthenticateWithCredential(user, credential);
       const userId = user.uid;
-      // Delete data
       const transactionsSnapshot = await getDocs(query(collection(db, "transactions"), where("userId", "==", userId)));
       await Promise.all(transactionsSnapshot.docs.map(doc => deleteDoc(doc.ref)));
       
@@ -457,9 +456,6 @@ export default function App() {
     }
   };
 
-  // --- RENDER LOGIC UPDATED BELOW ---
-
-  // 1. Loading State (First priority)
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -468,12 +464,10 @@ export default function App() {
     );
   }
 
-  // 2. Unauthenticated State
   if (!user) {
     return <LoginForm onLogin={() => {}} />;
   }
 
-  // 3. Authenticated State
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
@@ -490,7 +484,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-black hidden sm:inline">{user?.email}</span>
             <AlertsNotificationBell
-              budgets={currentBudgets} // Using currentBudgets for real-time calculation
+              budgets={currentBudgets}
               transactions={transactions}
               alertSettings={alertSettings}
               onUpdateAlertSettings={setAlertSettings}
@@ -507,18 +501,18 @@ export default function App() {
           <EmailVerification 
              onVerified={async () => {
               setShowVerificationBanner(false);
-              // Reload user to get updated verification status
               await auth.currentUser?.reload();
               window.location.reload(); 
             }}
           />
         )}
 
-        {/* Security Gate: Only show tabs if verified */}
+        {/* Security Gate */}
         {user?.emailVerified ? (
           <>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-gray-100">
+              {/* UPDATED: grid-cols-5 to accommodate the new Learn tab */}
+              <TabsList className="grid w-full grid-cols-5 bg-gray-100 h-auto sm:h-10">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
                   <span className="hidden sm:inline">Dashboard</span>
@@ -530,6 +524,11 @@ export default function App() {
                 <TabsTrigger value="insights" className="flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
                   <span className="hidden sm:inline">Insights</span>
+                </TabsTrigger>
+                {/* NEW TAB */}
+                <TabsTrigger value="learn" className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  <span className="hidden sm:inline">Learn</span>
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
@@ -565,6 +564,11 @@ export default function App() {
                 />
               </TabsContent>
 
+              {/* NEW CONTENT */}
+              <TabsContent value="learn" className="mt-6">
+                <LiteraturePage />
+              </TabsContent>
+
               <TabsContent value="settings" className="mt-6">
                 <SettingsPage
                   budgets={budgets}
@@ -579,7 +583,6 @@ export default function App() {
               </TabsContent>
             </Tabs>
 
-            {/* Dialogs only available when verified */}
             <AddTransactionDialog
               open={dialogOpen}
               onOpenChange={closeDialog}
@@ -605,7 +608,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Global Inactivity Warning */}
         <AlertDialog open={showInactivityWarning} onOpenChange={setShowInactivityWarning}>
           <AlertDialogContent className="bg-white">
             <AlertDialogHeader>

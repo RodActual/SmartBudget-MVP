@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Plus, TrendingDown, TrendingUp, Wallet, Target } from "lucide-react";
 import type { Budget, Transaction } from "../App";
+import { DailyTipCard } from "./DailyTipCard"; 
 
 interface DashboardOverviewProps {
   budgets: Budget[];
@@ -53,11 +54,18 @@ export function DashboardOverview({
         </div>
       </div>
 
-      {/* Quick Add Button */}
-      <Button onClick={onOpenAddTransaction} size="lg" className="w-full sm:w-auto text:black">
-        <Plus className="h-5 w-5" />
-        Add Transaction
-      </Button>
+      {/* Buttons Row */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button onClick={onOpenAddTransaction} size="lg" className="w-full sm:w-auto text-black">
+          <Plus className="h-5 w-5 mr-2" />
+          Add Transaction
+        </Button>
+      </div>
+
+      {/* Daily Tip Section */}
+      <div className="w-full">
+        <DailyTipCard />
+      </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
