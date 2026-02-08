@@ -13,7 +13,7 @@ import { LiteraturePage } from "./components/LiteraturePage";
 import { LandingPage } from "./components/LandingPage"; 
 import { PrivacyPolicy } from "./components/PrivacyPolicy";
 import { TermsOfService } from "./components/TermsOfService";
-import { WelcomeSetup } from "./components/WelcomeSetup"; // <--- IMPORT
+import { WelcomeSetup } from "./components/WelcomeSetup";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft } from "lucide-react"; 
@@ -49,6 +49,8 @@ import {
 } from "firebase/auth";
 
 import { EmailVerification } from "./components/EmailVerification";
+import { seedDatabase } from "./utils/seedDatabase";
+import { AdminBadge } from "./components/AdminBadge"; // <--- ADDED IMPORT
 
 // Types
 export interface Transaction {
@@ -102,11 +104,7 @@ export default function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
-  
-  // Setup Flag
-  const [isSetupComplete, setIsSetupComplete] = useState(true); // Default true to prevent flash
-
-  // Auth Modes
+  const [isSetupComplete, setIsSetupComplete] = useState(true);
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'privacy' | 'terms'>('landing');
 
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
@@ -124,50 +122,38 @@ export default function App() {
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Function to save settings to Firestore
   const handleSaveSettings = useCallback(async () => {
     if (!user) return;
-
     try {
       const settingsRef = doc(db, "userSettings", user.uid);
-      
       const settingsData = {
         userName,
         savingsGoal,
         notificationsEnabled,
         alertSettings,
-        isSetupComplete, // Persist this flag
+        isSetupComplete, 
         updatedAt: new Date().toISOString(),
       };
-
       await setDoc(settingsRef, settingsData, { merge: true });
-
     } catch (error) {
       console.error("Error saving settings:", error);
     }
   }, [user, userName, savingsGoal, notificationsEnabled, alertSettings, isSetupComplete]);
 
-  // Auth listener and initial settings load
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
       if (currentUser) {
         setShowVerificationBanner(!currentUser.emailVerified);
-
         try {
           const settingsRef = doc(db, "userSettings", currentUser.uid);
           const settingsDoc = await getDoc(settingsRef);
-          
           if (settingsDoc.exists()) {
             const data = settingsDoc.data();
             setUserName(data.userName || "User");
             setSavingsGoal(data.savingsGoal || 0);
             setNotificationsEnabled(data.notificationsEnabled ?? true);
-            
-            // Check setup status (undefined means true/legacy)
             setIsSetupComplete(data.isSetupComplete !== false);
-
             setAlertSettings(data.alertSettings || {
               budgetWarningEnabled: true,
               budgetWarningThreshold: 80,
@@ -182,36 +168,29 @@ export default function App() {
           console.error("Error loading user settings:", error);
         }
       }
-      
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // Effect to persist settings
   useEffect(() => {
     if (user && !loading) {
       const handler = setTimeout(() => {
         handleSaveSettings();
       }, 500);
-
       return () => clearTimeout(handler);
     }
   }, [user, loading, userName, savingsGoal, notificationsEnabled, alertSettings, handleSaveSettings]);
   
-  // Reset inactivity timer
   const resetInactivityTimer = useCallback(() => {
     if (!user) return;
-
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     if (warningTimer.current) clearTimeout(warningTimer.current);
     setShowInactivityWarning(false);
-
     warningTimer.current = setTimeout(() => setShowInactivityWarning(true), INACTIVITY_TIMEOUT - 2 * 60 * 1000);
     inactivityTimer.current = setTimeout(() => handleLogout(true), INACTIVITY_TIMEOUT);
   }, [user]);
 
-  // Inactivity detection
   useEffect(() => {
     if (!user) return;
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
@@ -225,7 +204,6 @@ export default function App() {
     };
   }, [user, resetInactivityTimer]);
 
-  // Firestore listeners
   useEffect(() => {
     if (!user) return;
 
@@ -269,14 +247,15 @@ export default function App() {
       (snapshot) => {
         const budgetData: Budget[] = [];
         snapshot.forEach((doc) => {
+          const data = doc.data();
           budgetData.push({ 
              id: doc.id,
-             category: doc.data().category,
-             budgeted: doc.data().budgeted,
-             color: doc.data().color,
-             lastReset: doc.data().lastReset || new Date(0).getTime(),
+             category: data.category,
+             budgeted: data.budgeted || data.amount || 0, // Fallback safety
+             color: data.color,
+             lastReset: data.lastReset || new Date(0).getTime(),
              spent: 0,
-             userId: doc.data().userId
+             userId: data.userId
           } as Budget);
         });
         setBudgets(budgetData);
@@ -290,7 +269,6 @@ export default function App() {
     };
   }, [user]);
 
-  // Current Budgets Calculation
   const currentBudgets = useMemo(() => {
       if (!user) return [];
       const startOfCurrentMonth = getCurrentMonthStartDate();
@@ -310,7 +288,6 @@ export default function App() {
       });
   }, [budgets, transactions, user]);
 
-  // Budget update handler
   const handleUpdateBudgets = async (newBudgets: Budget[]) => {
     if (!user) return;
     try {
@@ -352,7 +329,7 @@ export default function App() {
       setUserName("User");
       setSavingsGoal(0);
       setActiveTab("dashboard");
-      setAuthMode('landing'); // Reset to landing page on logout
+      setAuthMode('landing'); 
       if (isAutoLogout) alert("You have been logged out due to inactivity.");
     } catch (error) {
       console.error("Logout error:", error);
@@ -471,7 +448,25 @@ export default function App() {
     }
   };
 
-  // Callback to finish welcome flow
+  const handleSeed = async (scenario: 'healthy' | 'crisis') => {
+    if (user) {
+      const confirmMsg = scenario === 'crisis' 
+        ? "⚠️ Load CRISIS Mode?\nThis will create overspending alerts and large transactions."
+        : "🌱 Load HEALTHY Mode?\nThis will create normal income and expense data.";
+
+      if (window.confirm(confirmMsg)) {
+        try {
+          await seedDatabase(user.uid, scenario);
+          alert("Data seeded! The page will now reload.");
+          window.location.reload(); 
+        } catch (error) {
+          console.error("Seeding error:", error);
+          alert("Failed to seed data.");
+        }
+      }
+    }
+  };
+
   const handleWelcomeComplete = (name: string, goal: number) => {
     setUserName(name);
     setSavingsGoal(goal);
@@ -488,7 +483,6 @@ export default function App() {
 
   // --- UNAUTHENTICATED ROUTING ---
   if (!user) {
-    // 1. If user clicked "Sign In" or "Get Started"
     if (authMode === 'login' || authMode === 'signup') {
       return (
         <div className="relative min-h-screen bg-white">
@@ -500,23 +494,15 @@ export default function App() {
           </div>
           <LoginForm 
             onLogin={() => {}} 
-            initialIsSignUp={authMode === 'signup'} // Open correct tab
+            initialIsSignUp={authMode === 'signup'} 
           />
         </div>
       );
     }
 
-    // 2. Privacy Policy Page
-    if (authMode === 'privacy') {
-      return <PrivacyPolicy onBack={() => setAuthMode('landing')} />;
-    }
-
-    // 3. Terms of Service Page
-    if (authMode === 'terms') {
-      return <TermsOfService onBack={() => setAuthMode('landing')} />;
-    }
+    if (authMode === 'privacy') return <PrivacyPolicy onBack={() => setAuthMode('landing')} />;
+    if (authMode === 'terms') return <TermsOfService onBack={() => setAuthMode('landing')} />;
     
-    // 4. Default: Public Landing Page
     return (
       <LandingPage 
         onGetStarted={() => setAuthMode('signup')} 
@@ -529,7 +515,7 @@ export default function App() {
 
   // --- AUTHENTICATED APP ---
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white relative">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         
         {/* Header */}
@@ -543,6 +529,10 @@ export default function App() {
           
           <div className="flex items-center gap-2">
             <span className="text-sm text-black hidden sm:inline">{user?.email}</span>
+            
+            {/* ADDED: ADMIN BADGE */}
+            <AdminBadge />
+
             <AlertsNotificationBell
               budgets={currentBudgets}
               transactions={transactions}
@@ -570,7 +560,6 @@ export default function App() {
         {/* Security Gate */}
         {user?.emailVerified ? (
           <>
-            {/* CHECK: WELCOME FLOW */}
             {!isSetupComplete ? (
                <WelcomeSetup userId={user.uid} onComplete={handleWelcomeComplete} />
             ) : (
@@ -686,6 +675,27 @@ export default function App() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Floating Demo Buttons */}
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          <Button 
+            variant="secondary" 
+            size="sm"
+            onClick={() => handleSeed('healthy')}
+            className="shadow-lg border border-slate-200 opacity-70 hover:opacity-100 bg-white text-green-700 hover:bg-green-50"
+          >
+            🌱 Seed Healthy
+          </Button>
+          <Button 
+            variant="destructive"
+            size="sm" 
+            onClick={() => handleSeed('crisis')}
+            className="shadow-lg opacity-70 hover:opacity-100"
+          >
+            ⚠️ Seed Crisis
+          </Button>
+        </div>
+
       </div>
     </div>
   );
