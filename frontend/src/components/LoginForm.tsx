@@ -137,7 +137,9 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
         <CardContent>
           <Tabs value={isSignUp ? "signup" : "login"} onValueChange={(val) => setIsSignUp(val === "signup")} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
+              Already have an account?
               <TabsTrigger value="login">Login</TabsTrigger>
+              Are you new here?
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             
