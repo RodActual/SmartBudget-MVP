@@ -144,9 +144,6 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
               <div className="flex items-center gap-3">
-                <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent tracking-tight">
-                  SmartBudget
-                </span>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -164,8 +161,8 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
         <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center max-w-3xl mx-auto space-y-12" style={{ rowGap: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
-                Take manual control of your wealth.
+              <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
+                SmartBudget
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
                 Build better money habits through intentional tracking. No bank connections, no automated imports. Just you, your goals, and complete control.

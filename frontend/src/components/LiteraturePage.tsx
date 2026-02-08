@@ -18,13 +18,29 @@ interface Resource {
   readTime: string;
 }
 
-// --- SAMPLE DATA FOR SEEDING ---
+// Icon mapping: String from DB -> React Component
+const iconMap: { [key: string]: any } = {
+  "Clock": BookOpen,
+  "PieChart": BookOpen,
+  "Scissors": BookOpen,
+  "GraduationCap": BookOpen,
+  "Utensils": BookOpen,
+  "Umbrella": BookOpen,
+  "ShoppingBag": BookOpen,
+  "Ban": BookOpen,
+  "CreditCard": BookOpen,
+  "PiggyBank": BookOpen,
+  // Default fallback
+  "default": BookOpen
+};
+
+// --- UPDATED SAMPLE DATA WITH WORKING LINKS ---
 const SAMPLE_RESOURCES: Omit<Resource, "id">[] = [
   {
     title: "The 50/30/20 Rule Explained",
     description: "A simple framework to divide your income into Needs, Wants, and Savings.",
     category: "Article",
-    url: "https://www.investopedia.com/ask/answers/022916/what-503020-rule.asp",
+    url: "https://www.investopedia.com/financial-edge/0712/the-50-30-20-rule-of-thumb-for-budgets.aspx",
     difficulty: "Beginner",
     readTime: "3 min read"
   },
@@ -32,7 +48,7 @@ const SAMPLE_RESOURCES: Omit<Resource, "id">[] = [
     title: "Debt Snowball vs. Avalanche",
     description: "Two powerful strategies to eliminate debt. Which one fits your psychology?",
     category: "Guide",
-    url: "https://www.nerdwallet.com/article/finance/debt-snowball-vs-debt-avalanche",
+    url: "https://www.ramseysolutions.com/debt/debt-snowball-vs-debt-avalanche",
     difficulty: "Intermediate",
     readTime: "5 min read"
   },
@@ -40,17 +56,65 @@ const SAMPLE_RESOURCES: Omit<Resource, "id">[] = [
     title: "Compound Interest Calculator",
     description: "Visualize how your money can grow over time with the power of compound interest.",
     category: "Tool",
-    url: "https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator",
+    url: "https://www.calculator.net/compound-interest-calculator.html",
     difficulty: "Beginner",
     readTime: "Tool"
   },
   {
     title: "Emergency Fund Basics",
     description: "Why you need a financial safety net and how much you should save.",
-    category: "Video",
-    url: "https://www.youtube.com/watch?v=qfAQT184o9g", // Placeholder
+    category: "Article",
+    url: "https://www.nerdwallet.com/article/banking/emergency-fund-why-it-matters",
     difficulty: "Beginner",
-    readTime: "10 min watch"
+    readTime: "6 min read"
+  },
+  {
+    title: "How to Create a Budget",
+    description: "Step-by-step guide to building your first budget and sticking to it.",
+    category: "Guide",
+    url: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/",
+    difficulty: "Beginner",
+    readTime: "4 min read"
+  },
+  {
+    title: "Understanding Credit Scores",
+    description: "Learn what affects your credit score and how to improve it over time.",
+    category: "Article",
+    url: "https://www.myfico.com/credit-education/whats-in-your-credit-score",
+    difficulty: "Intermediate",
+    readTime: "5 min read"
+  },
+  {
+    title: "Retirement Planning Calculator",
+    description: "Calculate how much you need to save for retirement based on your goals.",
+    category: "Tool",
+    url: "https://www.nerdwallet.com/investing/retirement-calculator",
+    difficulty: "Intermediate",
+    readTime: "Tool"
+  },
+  {
+    title: "Investing for Beginners",
+    description: "A comprehensive introduction to stocks, bonds, and index funds.",
+    category: "Guide",
+    url: "https://www.investopedia.com/articles/basics/11/3-s-simple-investing.asp",
+    difficulty: "Intermediate",
+    readTime: "8 min read"
+  },
+  {
+    title: "Building Wealth on Any Income",
+    description: "Proven strategies to grow your net worth regardless of salary size.",
+    category: "Article",
+    url: "https://www.investopedia.com/personal-finance/wealth-building-strategies/",
+    difficulty: "Intermediate",
+    readTime: "7 min read"
+  },
+  {
+    title: "Student Loan Repayment Strategies",
+    description: "Smart ways to tackle student debt and save thousands in interest.",
+    category: "Guide",
+    url: "https://studentaid.gov/manage-loans/repayment",
+    difficulty: "Intermediate",
+    readTime: "6 min read"
   }
 ];
 
@@ -92,7 +156,7 @@ export function LiteraturePage() {
         await addDoc(collection(db, "literatureResources"), resource);
       }
       await fetchResources(); // Refresh list
-      alert("Database seeded successfully!");
+      alert("Database seeded successfully with updated working links!");
     } catch (error) {
       console.error("Error seeding database:", error);
       alert("Failed to seed database.");
@@ -153,11 +217,11 @@ export function LiteraturePage() {
 
       {/* Category Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {["All", "Article", "Video", "Tool", "Guide"].map((cat) => (
+        {["All Types", "Article", "Video", "Tool", "Guide"].map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border ${
+            className={`px-5 py-2 rounded-full text-lg font-medium transition-all  border ${
               selectedCategory === cat 
                 ? "bg-slate-900 text-white border-slate-900 shadow-sm" 
                 : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
@@ -192,7 +256,7 @@ export function LiteraturePage() {
                    {seeding ? "Seeding..." : (
                      <>
                        <Database className="mr-2 h-4 w-4" />
-                       Seed Database with Sample Data
+                       Seed Database with Updated Links
                      </>
                    )}
                  </Button>

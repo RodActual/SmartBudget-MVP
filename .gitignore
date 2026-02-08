@@ -63,7 +63,7 @@ Thumbs.db
 # Firebase cache and config
 .firebase/
 .firebaserc
-backend/config/serviceAccountKey.json
+frontend/serviceAccountKey.json
 
 # ---- IDE / Tooling ----
 .vscode/
