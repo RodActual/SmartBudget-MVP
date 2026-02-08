@@ -13,6 +13,7 @@ import { LiteraturePage } from "./components/LiteraturePage";
 import { LandingPage } from "./components/LandingPage"; 
 import { PrivacyPolicy } from "./components/PrivacyPolicy";
 import { TermsOfService } from "./components/TermsOfService";
+import { WelcomeSetup } from "./components/WelcomeSetup"; // <--- IMPORT
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft } from "lucide-react"; 
@@ -102,12 +103,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   
-  // UPDATED: Authentication Mode State
-  // 'landing' = Public Home Page
-  // 'login' = Sign In Form
-  // 'signup' = Create Account Form
-  // 'privacy' = Privacy Policy Page
-  // 'terms' = Terms of Service Page
+  // Setup Flag
+  const [isSetupComplete, setIsSetupComplete] = useState(true); // Default true to prevent flash
+
+  // Auth Modes
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'privacy' | 'terms'>('landing');
 
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
@@ -137,6 +136,7 @@ export default function App() {
         savingsGoal,
         notificationsEnabled,
         alertSettings,
+        isSetupComplete, // Persist this flag
         updatedAt: new Date().toISOString(),
       };
 
@@ -145,7 +145,7 @@ export default function App() {
     } catch (error) {
       console.error("Error saving settings:", error);
     }
-  }, [user, userName, savingsGoal, notificationsEnabled, alertSettings]);
+  }, [user, userName, savingsGoal, notificationsEnabled, alertSettings, isSetupComplete]);
 
   // Auth listener and initial settings load
   useEffect(() => {
@@ -165,6 +165,9 @@ export default function App() {
             setSavingsGoal(data.savingsGoal || 0);
             setNotificationsEnabled(data.notificationsEnabled ?? true);
             
+            // Check setup status (undefined means true/legacy)
+            setIsSetupComplete(data.isSetupComplete !== false);
+
             setAlertSettings(data.alertSettings || {
               budgetWarningEnabled: true,
               budgetWarningThreshold: 80,
@@ -468,6 +471,13 @@ export default function App() {
     }
   };
 
+  // Callback to finish welcome flow
+  const handleWelcomeComplete = (name: string, goal: number) => {
+    setUserName(name);
+    setSavingsGoal(goal);
+    setIsSetupComplete(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -511,8 +521,8 @@ export default function App() {
       <LandingPage 
         onGetStarted={() => setAuthMode('signup')} 
         onSignIn={() => setAuthMode('login')} 
-        onOpenPrivacy={() => setAuthMode('privacy')} // Connect Footer Links
-        onOpenTerms={() => setAuthMode('terms')}     // Connect Footer Links
+        onOpenPrivacy={() => setAuthMode('privacy')} 
+        onOpenTerms={() => setAuthMode('terms')}     
       />
     );
   }
@@ -560,83 +570,90 @@ export default function App() {
         {/* Security Gate */}
         {user?.emailVerified ? (
           <>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-gray-100 h-auto sm:h-10">
-                <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </TabsTrigger>
-                <TabsTrigger value="expenses" className="flex items-center gap-2">
-                  <Receipt className="h-4 w-4" />
-                  <span className="hidden sm:inline">Expenses</span>
-                </TabsTrigger>
-                <TabsTrigger value="insights" className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Insights</span>
-                </TabsTrigger>
-                <TabsTrigger value="learn" className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  <span className="hidden sm:inline">Learn</span>
-                </TabsTrigger>
-                <TabsTrigger value="settings" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden sm:inline">Settings</span>
-                </TabsTrigger>
-              </TabsList>
+            {/* CHECK: WELCOME FLOW */}
+            {!isSetupComplete ? (
+               <WelcomeSetup userId={user.uid} onComplete={handleWelcomeComplete} />
+            ) : (
+              <>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-5 bg-gray-100 h-auto sm:h-10">
+                    <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span className="hidden sm:inline">Dashboard</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="expenses" className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4" />
+                      <span className="hidden sm:inline">Expenses</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="insights" className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Insights</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="learn" className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      <span className="hidden sm:inline">Learn</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="settings" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      <span className="hidden sm:inline">Settings</span>
+                    </TabsTrigger>
+                  </TabsList>
 
-              <TabsContent value="dashboard" className="mt-6">
-                <DashboardOverview
-                  budgets={currentBudgets}
-                  transactions={transactions}
-                  onOpenAddTransaction={openAddTransactionDialog}
-                  userName={userName}
-                  savingsGoal={savingsGoal}
+                  <TabsContent value="dashboard" className="mt-6">
+                    <DashboardOverview
+                      budgets={currentBudgets}
+                      transactions={transactions}
+                      onOpenAddTransaction={openAddTransactionDialog}
+                      userName={userName}
+                      savingsGoal={savingsGoal}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="expenses" className="mt-6">
+                    <ExpenseTracking
+                      transactions={transactions}
+                      onOpenAddTransaction={openAddTransactionDialog}
+                      onEdit={openEditDialog}
+                      onDelete={handleDeleteTransaction}
+                      onArchiveOldTransactions={handleArchiveOldTransactions}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="insights" className="mt-6">
+                    <ChartsInsights
+                      budgets={currentBudgets}
+                      transactions={transactions}
+                      onUpdateBudgets={handleUpdateBudgets}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="learn" className="mt-6">
+                    <LiteraturePage />
+                  </TabsContent>
+
+                  <TabsContent value="settings" className="mt-6">
+                    <SettingsPage
+                      budgets={budgets}
+                      transactions={transactions}
+                      userName={userName}
+                      onUpdateUserName={setUserName}
+                      savingsGoal={savingsGoal}
+                      onUpdateSavingsGoal={setSavingsGoal}
+                      onUpdatePassword={handleUpdatePassword}
+                      onDeleteAccount={handleDeleteAccount}
+                    />
+                  </TabsContent>
+                </Tabs>
+
+                <AddTransactionDialog
+                  open={dialogOpen}
+                  onOpenChange={closeDialog}
+                  onAddTransaction={handleAddTransaction}
+                  onEditTransaction={handleEditTransaction}
+                  editingTransaction={editingTransaction}
                 />
-              </TabsContent>
-
-              <TabsContent value="expenses" className="mt-6">
-                <ExpenseTracking
-                  transactions={transactions}
-                  onOpenAddTransaction={openAddTransactionDialog}
-                  onEdit={openEditDialog}
-                  onDelete={handleDeleteTransaction}
-                  onArchiveOldTransactions={handleArchiveOldTransactions}
-                />
-              </TabsContent>
-
-              <TabsContent value="insights" className="mt-6">
-                <ChartsInsights
-                  budgets={currentBudgets}
-                  transactions={transactions}
-                  onUpdateBudgets={handleUpdateBudgets}
-                />
-              </TabsContent>
-
-              <TabsContent value="learn" className="mt-6">
-                <LiteraturePage />
-              </TabsContent>
-
-              <TabsContent value="settings" className="mt-6">
-                <SettingsPage
-                  budgets={budgets}
-                  transactions={transactions}
-                  userName={userName}
-                  onUpdateUserName={setUserName}
-                  savingsGoal={savingsGoal}
-                  onUpdateSavingsGoal={setSavingsGoal}
-                  onUpdatePassword={handleUpdatePassword}
-                  onDeleteAccount={handleDeleteAccount}
-                />
-              </TabsContent>
-            </Tabs>
-
-            <AddTransactionDialog
-              open={dialogOpen}
-              onOpenChange={closeDialog}
-              onAddTransaction={handleAddTransaction}
-              onEditTransaction={handleEditTransaction}
-              editingTransaction={editingTransaction}
-            />
+              </>
+            )}
           </>
         ) : (
           <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl mt-6">

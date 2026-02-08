@@ -49,6 +49,7 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
         await setDoc(doc(db, "userSettings", user.uid), {
           userName: email.split("@")[0],
           savingsGoal: 0,
+          isSetupComplete: false, // <--- NEW FLAG
           notificationsEnabled: true,
           alertSettings: {
             budgetWarningEnabled: true,
@@ -99,6 +100,7 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
         await setDoc(docRef, {
           userName: user.displayName || user.email?.split("@")[0] || "User",
           savingsGoal: 0,
+          isSetupComplete: false, // <--- NEW FLAG
           notificationsEnabled: true,
           alertSettings: {
             budgetWarningEnabled: true,
@@ -192,7 +194,6 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
                   </Alert>
                 )}
 
-                {/* FORCE WHITE TEXT */}
                 <Button 
                   type="submit" 
                   className="w-full bg-black hover:bg-gray-800" 
@@ -237,7 +238,6 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-            {/* Footer content if needed */}
         </CardFooter>
       </Card>
     </div>
