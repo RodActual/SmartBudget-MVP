@@ -11,6 +11,8 @@ import { LoginForm } from "./components/LoginForm";
 import { AlertsNotificationBell } from "./components/AlertsNotificationBell";
 import { LiteraturePage } from "./components/LiteraturePage"; 
 import { LandingPage } from "./components/LandingPage"; 
+import { PrivacyPolicy } from "./components/PrivacyPolicy";
+import { TermsOfService } from "./components/TermsOfService";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft } from "lucide-react"; 
@@ -104,7 +106,9 @@ export default function App() {
   // 'landing' = Public Home Page
   // 'login' = Sign In Form
   // 'signup' = Create Account Form
-  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup'>('landing');
+  // 'privacy' = Privacy Policy Page
+  // 'terms' = Terms of Service Page
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'privacy' | 'terms'>('landing');
 
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
     budgetWarningEnabled: true,
@@ -474,7 +478,7 @@ export default function App() {
 
   // --- UNAUTHENTICATED ROUTING ---
   if (!user) {
-    // If user clicked "Sign In" or "Get Started"
+    // 1. If user clicked "Sign In" or "Get Started"
     if (authMode === 'login' || authMode === 'signup') {
       return (
         <div className="relative min-h-screen bg-white">
@@ -491,12 +495,24 @@ export default function App() {
         </div>
       );
     }
+
+    // 2. Privacy Policy Page
+    if (authMode === 'privacy') {
+      return <PrivacyPolicy onBack={() => setAuthMode('landing')} />;
+    }
+
+    // 3. Terms of Service Page
+    if (authMode === 'terms') {
+      return <TermsOfService onBack={() => setAuthMode('landing')} />;
+    }
     
-    // Default: Public Landing Page
+    // 4. Default: Public Landing Page
     return (
       <LandingPage 
         onGetStarted={() => setAuthMode('signup')} 
         onSignIn={() => setAuthMode('login')} 
+        onOpenPrivacy={() => setAuthMode('privacy')} // Connect Footer Links
+        onOpenTerms={() => setAuthMode('terms')}     // Connect Footer Links
       />
     );
   }
