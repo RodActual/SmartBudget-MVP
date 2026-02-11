@@ -2,10 +2,10 @@ import "./globals.css";
 import { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
-import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore"; // Ensure specific imports for manual ops
+import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore"; 
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
-// Components
+// Components (Barrel File Import)
 import { 
   DashboardOverview, 
   ExpenseTracking, 
@@ -29,7 +29,7 @@ import { Button } from "./ui/button";
 import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft } from "lucide-react"; 
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 
-// NEW HOOKS
+// Hooks
 import { useFinancialData } from "./hooks/useFinancialData";
 import { useInactivity } from "./hooks/useInactivity";
 
@@ -252,13 +252,25 @@ export default function App() {
                 <TabsContent value="dashboard" className="mt-6">
                   <DashboardOverview budgets={currentBudgets} transactions={transactions} onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} userName={userName} savingsGoal={savingsGoal} />
                 </TabsContent>
+                
                 <TabsContent value="expenses" className="mt-6">
-                  <ExpenseTracking transactions={transactions} onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} onDelete={deleteTransaction} onArchiveOldTransactions={handleArchiveOld} />
+                  {/* FIX: PASS budgets PROPS HERE */}
+                  <ExpenseTracking 
+                    transactions={transactions} 
+                    budgets={budgets}
+                    onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
+                    onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
+                    onDelete={deleteTransaction} 
+                    onArchiveOldTransactions={handleArchiveOld} 
+                  />
                 </TabsContent>
+                
                 <TabsContent value="insights" className="mt-6">
                   <ChartsInsights budgets={currentBudgets} transactions={transactions} onUpdateBudgets={updateBudgets} />
                 </TabsContent>
+                
                 <TabsContent value="learn" className="mt-6"><LiteraturePage /></TabsContent>
+                
                 <TabsContent value="settings" className="mt-6">
                   <SettingsPage 
                     budgets={budgets} transactions={transactions} userId={user.uid}

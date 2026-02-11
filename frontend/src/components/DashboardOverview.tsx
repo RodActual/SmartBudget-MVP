@@ -101,7 +101,9 @@ export function DashboardOverview({
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl">${remainingBudget.toFixed(2)}</div>
+            <div className={`text-2xl ${remainingBudget < 0 ? 'text-red-500' : ''}`}>
+                ${remainingBudget.toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Remaining to spend
             </p>
@@ -124,62 +126,108 @@ export function DashboardOverview({
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentTransactions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No transactions yet. Add your first transaction to get started!</p>
-          ) : (
-            <div className="space-y-4">
-              {recentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-full ${
-                        transaction.type === "income"
-                          ? "bg-green-100 text-[#00A86B]"
-                          : "bg-red-100 text-destructive"
-                      }`}
-                    >
-                      {transaction.type === "income" ? (
-                        <TrendingUp className="h-4 w-4" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4" />
-                      )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Budget Progress Bars - NEW SECTION */}
+        <Card className="col-span-4">
+            <CardHeader>
+                <CardTitle>Budget Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-6">
+                {budgets.map((budget) => {
+                    const percentage = Math.min((budget.spent / budget.budgeted) * 100, 100);
+                    return (
+                    <div key={budget.id} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                            {/* Dynamic Color Dot */}
+                            <div 
+                                className="w-3 h-3 rounded-full shadow-sm" 
+                                style={{ backgroundColor: budget.color }}
+                            />
+                            <span className="font-medium">{budget.category}</span>
+                        </div>
+                        <span className="text-gray-500">
+                            ${budget.spent.toFixed(0)} / ${budget.budgeted}
+                        </span>
+                        </div>
+                        {/* Dynamic Color Progress Bar */}
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                            className="h-full transition-all duration-500" 
+                            style={{ 
+                            width: `${percentage}%`,
+                            backgroundColor: budget.color 
+                            }} 
+                        />
+                        </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{transaction.description}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {transaction.category} •{" "}
-                        {new Date(transaction.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <p
-                    className={`font-medium ${
-                      transaction.type === "income"
-                        ? "text-[#00A86B]"
-                        : "text-destructive"
-                    }`}
-                  >
-                    {transaction.type === "income" ? "+" : "-"}$
-                    {transaction.amount.toFixed(2)}
-                  </p>
+                    );
+                })}
+                {budgets.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">No budgets set yet.</p>
+                )}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card className="col-span-3">
+            <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+            {recentTransactions.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No transactions yet.</p>
+            ) : (
+                <div className="space-y-4">
+                {recentTransactions.map((transaction) => (
+                    <div
+                    key={transaction.id}
+                    className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                    >
+                    <div className="flex items-center gap-3">
+                        <div
+                        className={`p-2 rounded-full ${
+                            transaction.type === "income"
+                            ? "bg-green-100 text-[#00A86B]"
+                            : "bg-red-100 text-destructive"
+                        }`}
+                        >
+                        {transaction.type === "income" ? (
+                            <TrendingUp className="h-4 w-4" />
+                        ) : (
+                            <TrendingDown className="h-4 w-4" />
+                        )}
+                        </div>
+                        <div>
+                        <p className="font-medium">{transaction.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {transaction.category} •{" "}
+                            {new Date(transaction.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            })}
+                        </p>
+                        </div>
+                    </div>
+                    <p
+                        className={`font-medium ${
+                        transaction.type === "income"
+                            ? "text-[#00A86B]"
+                            : "text-destructive"
+                        }`}
+                    >
+                        {transaction.type === "income" ? "+" : "-"}$
+                        {Math.abs(transaction.amount).toFixed(2)}
+                    </p>
+                    </div>
+                ))}
+                </div>
+            )}
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
