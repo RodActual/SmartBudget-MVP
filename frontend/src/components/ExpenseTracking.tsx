@@ -13,7 +13,7 @@ const getTodayStart = () => {
 
 interface ExpenseTrackingProps {
   transactions: Transaction[];
-  budgets: Budget[]; // <-- Added Prop
+  budgets: Budget[]; 
   onOpenAddTransaction: () => void;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
@@ -29,24 +29,27 @@ export function ExpenseTracking({
   onArchiveOldTransactions,
 }: ExpenseTrackingProps) {
 
-  // 1. Calculate the 90-day cutoff date
   const todayStart = getTodayStart();
   const ninetyDaysAgo = new Date(todayStart);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   
-  // 2. Format dates for display
   const formatDate = (date: Date) => date.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
   const startDate = formatDate(ninetyDaysAgo);
   const endDate = formatDate(todayStart);
 
-  // 3. Filter transactions
+  // 1. Filter Logic: Last 90 Days AND Not Archived
   const transactionsLast90Days = transactions.filter(t => {
+    if (t.archived) return false; // HIDE ARCHIVED ITEMS
+
     const transactionDate = new Date(t.date);
     transactionDate.setHours(0, 0, 0, 0); 
     return transactionDate >= ninetyDaysAgo; 
   });
   
+  // 2. Archive Logic: Older than 90 Days AND Not Archived
   const oldTransactions = transactions.filter(t => {
+    if (t.archived) return false; // Don't count already archived items
+
     const transactionDate = new Date(t.date);
     transactionDate.setHours(0, 0, 0, 0);
     return transactionDate < ninetyDaysAgo;
@@ -54,20 +57,19 @@ export function ExpenseTracking({
 
   const handleArchiveClick = () => {
     if (oldTransactions.length === 0) {
-        alert("No transactions older than 90 days to delete.");
+        alert("No active transactions older than 90 days found.");
         return;
     }
     
-    if (window.confirm(`Permanently delete ${oldTransactions.length} transactions older than 90 days?`)) {
+    if (window.confirm(`Archive ${oldTransactions.length} transactions older than 90 days? They will be hidden from this list but remain in your charts.`)) {
         const oldIds = oldTransactions.map(t => t.id);
         onArchiveOldTransactions(oldIds);
     }
   };
 
-  // Helper to find color
   const getCategoryColor = (categoryName: string) => {
     const budget = budgets.find(b => b.category === categoryName);
-    return budget ? budget.color : "#9ca3af"; // Default gray if not found
+    return budget ? budget.color : "#9ca3af"; 
   };
 
   return (
@@ -82,8 +84,8 @@ export function ExpenseTracking({
         </div>
         <div className="flex items-center space-x-4">
           {oldTransactions.length > 0 && (
-            <Button variant="destructive" onClick={handleArchiveClick} size="sm">
-                Delete {oldTransactions.length} Old Transactions
+            <Button variant="outline" onClick={handleArchiveClick} size="sm">
+                Archive {oldTransactions.length} Old Transactions
             </Button>
           )}
 
@@ -94,7 +96,7 @@ export function ExpenseTracking({
         </div>
       </div>
 
-      {/* Table (Inlined to support Colors) */}
+      {/* Table */}
       <div className="rounded-md border bg-white">
         <Table>
             <TableHeader>
@@ -116,7 +118,6 @@ export function ExpenseTracking({
                     <TableCell>{transaction.description}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {/* COLORED DOT */}
                         <div 
                             className="w-3 h-3 rounded-full" 
                             style={{ backgroundColor: getCategoryColor(transaction.category) }} 
@@ -147,7 +148,7 @@ export function ExpenseTracking({
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-gray-500">
-                    No transactions found in this period.
+                    No active transactions found in this period.
                   </TableCell>
                 </TableRow>
               )}

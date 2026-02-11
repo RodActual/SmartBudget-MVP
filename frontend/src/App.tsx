@@ -5,7 +5,7 @@ import { auth, db } from "./firebase";
 import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore"; 
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
-// Components (Barrel File Import)
+// Components
 import { 
   DashboardOverview, 
   ExpenseTracking, 
@@ -42,6 +42,7 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   userId?: string;
+  archived?: boolean; // <--- NEW: Allows Soft Delete
 }
 
 export interface Budget {
@@ -89,7 +90,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'privacy' | 'terms'>('landing');
   const [showVerificationBanner, setShowVerificationBanner] = useState(false);
 
-  // --- 3. CUSTOM HOOKS (The Logic) ---
+  // --- 3. CUSTOM HOOKS ---
   const { 
     transactions, budgets, currentBudgets, loading: dataLoading, 
     addTransaction, updateTransaction, deleteTransaction, updateBudgets 
@@ -166,7 +167,6 @@ export default function App() {
     try {
       const cred = EmailAuthProvider.credential(user.email!, pass);
       await reauthenticateWithCredential(user, cred);
-      // Manual cleanup for account deletion is safer here than in hook
       const uid = user.uid;
       const tSnaps = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
       const bSnaps = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
@@ -180,9 +180,11 @@ export default function App() {
     } catch (e: any) { return { success: false, error: e.message }; }
   };
 
+  // --- NEW: Soft Delete Logic ---
   const handleArchiveOld = async (ids: string[]) => {
-      await Promise.all(ids.map(id => deleteTransaction(id)));
-      alert(`Archived ${ids.length} transactions.`);
+      // Instead of deleteTransaction, we update the transaction to be archived
+      await Promise.all(ids.map(id => updateTransaction(id, { archived: true })));
+      alert(`Archived ${ids.length} transactions. They will still appear in charts.`);
   };
 
   // --- 7. RENDERING ---
@@ -254,10 +256,9 @@ export default function App() {
                 </TabsContent>
                 
                 <TabsContent value="expenses" className="mt-6">
-                  {/* FIX: PASS budgets PROPS HERE */}
                   <ExpenseTracking 
                     transactions={transactions} 
-                    budgets={budgets}
+                    budgets={budgets} 
                     onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                     onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
                     onDelete={deleteTransaction} 
@@ -266,6 +267,7 @@ export default function App() {
                 </TabsContent>
                 
                 <TabsContent value="insights" className="mt-6">
+                  {/* We pass ALL transactions (including archived) to Charts so history remains */}
                   <ChartsInsights budgets={currentBudgets} transactions={transactions} onUpdateBudgets={updateBudgets} />
                 </TabsContent>
                 
