@@ -10,21 +10,27 @@ export function AdminBadge() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true; // Fix: Prevent memory leaks if unmounted
+
     const checkAdminStatus = async () => {
       const user = auth.currentUser;
       if (user) {
         try {
           const idTokenResult = await user.getIdTokenResult();
-          setIsAdmin(!!idTokenResult.claims.admin);
+          if (isMounted) {
+            setIsAdmin(!!idTokenResult.claims.admin);
+          }
         } catch (error) {
           console.error("Error checking admin status:", error);
-          setIsAdmin(false);
+          if (isMounted) setIsAdmin(false);
         }
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     checkAdminStatus();
+    
+    return () => { isMounted = false; };
   }, []);
 
   if (loading || !isAdmin) return null;
@@ -43,21 +49,25 @@ export function useIsAdmin() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAdminStatus = async () => {
       const user = auth.currentUser;
       if (user) {
         try {
           const idTokenResult = await user.getIdTokenResult();
-          setIsAdmin(!!idTokenResult.claims.admin);
+          if (isMounted) setIsAdmin(!!idTokenResult.claims.admin);
         } catch (error) {
           console.error("Error checking admin status:", error);
-          setIsAdmin(false);
+          if (isMounted) setIsAdmin(false);
         }
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     checkAdminStatus();
+    
+    return () => { isMounted = false; };
   }, []);
 
   return { isAdmin, loading };

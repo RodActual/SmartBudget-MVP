@@ -2,7 +2,8 @@ import "./globals.css";
 import { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
-import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore"; 
+// ADDED: writeBatch to imports
+import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore"; 
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 // Components
@@ -42,7 +43,7 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   userId?: string;
-  archived?: boolean; // <--- NEW: Allows Soft Delete
+  archived?: boolean; 
 }
 
 export interface Budget {
@@ -162,22 +163,39 @@ export default function App() {
     } catch (e: any) { return { success: false, error: e.message }; }
   };
 
+  // --- SECURITY FIX: Orphaned Data Prevention ---
   const handleDeleteAccount = async (pass: string) => {
     if (!user) return { success: false, error: "No user" };
     try {
+      // 1. Re-authenticate first
       const cred = EmailAuthProvider.credential(user.email!, pass);
       await reauthenticateWithCredential(user, cred);
+      
       const uid = user.uid;
+      
+      // 2. Query all user data
       const tSnaps = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
       const bSnaps = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
-      await Promise.all([
-        ...tSnaps.docs.map(d => deleteDoc(d.ref)),
-        ...bSnaps.docs.map(d => deleteDoc(d.ref)),
-        deleteDoc(doc(db, "userSettings", uid)),
-        deleteUser(user)
-      ]);
+      
+      // 3. Perform ATOMIC deletion using writeBatch
+      // This is safer and cleaner than Promise.all() for Firestore ops
+      const batch = writeBatch(db);
+      
+      tSnaps.docs.forEach(d => batch.delete(d.ref));
+      bSnaps.docs.forEach(d => batch.delete(d.ref));
+      batch.delete(doc(db, "userSettings", uid));
+      
+      // 4. Commit the batch BEFORE deleting the user
+      await batch.commit();
+      
+      // 5. Delete the Auth User last
+      await deleteUser(user);
+      
       return { success: true };
-    } catch (e: any) { return { success: false, error: e.message }; }
+    } catch (e: any) { 
+      console.error("Delete Account Error:", e);
+      return { success: false, error: e.message }; 
+    }
   };
 
   // --- NEW: Soft Delete Logic ---
