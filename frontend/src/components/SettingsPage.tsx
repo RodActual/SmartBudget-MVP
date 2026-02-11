@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Save, Target, Lock, Trash2, AlertTriangle } from "lucide-react";
+import { Save, Target, Lock, Trash2, AlertTriangle, Database, Sprout } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +16,9 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import type { Budget, Transaction } from "../App";
+import { seedDatabase } from "../utils/seedDatabase";
+import { clearDatabase } from "../utils/clearDatabase";
+import { useIsAdmin } from "./AdminBadge"; // <--- 1. IMPORT HOOK
 
 interface SettingsPageProps {
   budgets: Budget[];
@@ -26,6 +29,7 @@ interface SettingsPageProps {
   onUpdateSavingsGoal: (goal: number) => void;
   onUpdatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   onDeleteAccount: (password: string) => Promise<{ success: boolean; error?: string }>;
+  userId: string;
 }
 
 export function SettingsPage({
@@ -37,12 +41,15 @@ export function SettingsPage({
   onUpdateSavingsGoal,
   onUpdatePassword,
   onDeleteAccount,
+  userId,
 }: SettingsPageProps) {
+  // --- 2. CHECK ADMIN STATUS ---
+  const { isAdmin } = useIsAdmin();
+
   // Local state for General Settings form
   const [tempUserName, setTempUserName] = useState(userName);
   const [tempSavingsGoal, setTempSavingsGoal] = useState(savingsGoal.toString());
   const [isSaving, setIsSaving] = useState(false);
-  // State for save feedback message
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Password update state
@@ -53,17 +60,20 @@ export function SettingsPage({
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Data Management state (Seeding/Clearing)
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [dataMessage, setDataMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
   // Account deletion state
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
 
-  // Handler for Personal Settings Save
+  // --- HANDLER: Personal Settings Save ---
   const handleSave = async () => {
     setSaveMessage(null);
     setIsSaving(true);
     
     try {
-        // Update parent component state
         if (tempUserName.trim()) {
             onUpdateUserName(tempUserName.trim());
         }
@@ -73,7 +83,7 @@ export function SettingsPage({
             onUpdateSavingsGoal(goalValue);
         }
 
-        // Simulate network latency/save completion delay for feedback (500ms)
+        // Simulate network latency
         await new Promise(resolve => setTimeout(resolve, 500)); 
 
         setSaveMessage({ type: 'success', text: "Settings saved successfully! ✅" });
@@ -82,12 +92,11 @@ export function SettingsPage({
         setSaveMessage({ type: 'error', text: "Failed to save settings. Please try again." });
     } finally {
         setIsSaving(false);
-        // Clear message after 3 seconds
         setTimeout(() => setSaveMessage(null), 3000);
     }
   };
 
-  // Handler for Password Update
+  // --- HANDLER: Password Update ---
   const handleUpdatePassword = async () => {
     setPasswordError("");
     setPasswordSuccess("");
@@ -122,7 +131,56 @@ export function SettingsPage({
     }
   };
 
-  // Handler for Account Deletion
+  // --- HANDLER: Data Seeding ---
+  const handleSeed = async (scenario: 'healthy' | 'crisis') => {
+    if (!userId) {
+        setDataMessage({ type: 'error', text: "Error: User ID not found. Refresh and try again." });
+        return;
+    }
+
+    const confirmMsg = scenario === 'crisis' 
+      ? "⚠️ Load CRISIS Mode?\nThis will create overspending alerts and large transactions."
+      : "🌱 Load HEALTHY Mode?\nThis will create normal income and balanced expenses.";
+
+    if (window.confirm(confirmMsg)) {
+      setIsDataLoading(true);
+      setDataMessage(null);
+      try {
+        await seedDatabase(userId, scenario);
+        setDataMessage({ type: 'success', text: "Data seeded! Reloading..." });
+        // Force reload to ensure charts update cleanly
+        setTimeout(() => window.location.reload(), 1000);
+      } catch (error) {
+        console.error("Seeding error:", error);
+        setDataMessage({ type: 'error', text: "Failed to seed data." });
+        setIsDataLoading(false);
+      }
+    }
+  };
+
+  // --- HANDLER: Clear Data ---
+  const handleClearData = async () => {
+    if (!userId) {
+        setDataMessage({ type: 'error', text: "Error: User ID not found. Refresh and try again." });
+        return;
+    }
+
+    if (window.confirm("⚠️ Are you sure? This will DELETE ALL transactions and budgets permanently.")) {
+      setIsDataLoading(true);
+      setDataMessage(null);
+      try {
+        await clearDatabase(userId);
+        setDataMessage({ type: 'success', text: "All data cleared successfully." });
+      } catch (error) {
+        console.error("Clear error:", error);
+        setDataMessage({ type: 'error', text: "Failed to clear data." });
+      } finally {
+        setIsDataLoading(false);
+      }
+    }
+  };
+
+  // --- HANDLER: Account Deletion ---
   const handleDeleteAccount = async () => {
     setDeleteError("");
 
@@ -136,7 +194,6 @@ export function SettingsPage({
     if (!result.success) {
       setDeleteError(result.error || "Failed to delete account");
     }
-    // If successful, the user will be logged out automatically
   };
 
   return (
@@ -159,7 +216,6 @@ export function SettingsPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* User Name */}
             <div className="space-y-2">
               <Label htmlFor="userName">Your Name</Label>
               <Input
@@ -170,7 +226,6 @@ export function SettingsPage({
               />
             </div>
 
-            {/* Savings Goal */}
             <div className="space-y-2">
               <Label htmlFor="savingsGoal" className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
@@ -189,14 +244,12 @@ export function SettingsPage({
               </p>
             </div>
 
-            {/* Save Message Display */}
             {saveMessage && (
                 <p className={`text-sm font-medium ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
                     {saveMessage.text}
                 </p>
             )}
 
-            {/* Save Button */}
             <Button onClick={handleSave} className="w-full" disabled={isSaving}>
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? "Saving..." : "Save Settings"}
@@ -204,9 +257,8 @@ export function SettingsPage({
           </CardContent>
         </Card>
 
-        {/* Account Security (Now only includes Password Update) */}
+        {/* Account Security */}
         <div className="space-y-6">
-          {/* Update Password */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -269,6 +321,63 @@ export function SettingsPage({
           </Card>
         </div>
       </div>
+
+      {/* NEW: Data Management Card (ADMIN ONLY) */}
+      {isAdmin && ( // <--- 3. CONDITIONAL RENDER START
+        <Card className="border-blue-100 bg-slate-50">
+            <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-slate-800">
+                <Database className="h-5 w-5 text-blue-600" />
+                Data Management (Admin Only)
+            </CardTitle>
+            <CardDescription>
+                Tools for testing, demos, and resetting your environment.
+            </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {/* Data Action Feedback */}
+                {dataMessage && (
+                    <p className={`text-sm font-medium ${dataMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                        {dataMessage.text}
+                    </p>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Seed Healthy */}
+                    <div className="p-4 bg-white border rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2 mb-2 font-medium text-green-700">
+                            <Sprout className="h-4 w-4" />
+                            Seed Healthy Data
+                        </div>
+                        <p className="text-xs text-gray-500 mb-3">Adds realistic income and balanced expenses.</p>
+                        <Button variant="outline" size="sm" onClick={() => handleSeed('healthy')} disabled={isDataLoading} className="w-full">
+                            Load Healthy
+                        </Button>
+                    </div>
+
+                    {/* Seed Crisis */}
+                    <div className="p-4 bg-white border rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2 mb-2 font-medium text-orange-700">
+                            <AlertTriangle className="h-4 w-4" />
+                            Seed Crisis Data
+                        </div>
+                        <p className="text-xs text-gray-500 mb-3">Adds high expenses and alerts to test warnings.</p>
+                        <Button variant="outline" size="sm" onClick={() => handleSeed('crisis')} disabled={isDataLoading} className="w-full">
+                            Load Crisis
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Clear Data */}
+                <div className="pt-2">
+                    <Button variant="outline" onClick={handleClearData} disabled={isDataLoading} className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear All Transactions & Budgets
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+      )} {/* <--- CONDITIONAL RENDER END */}
 
       {/* Danger Zone */}
       <Card className="border-red-200">

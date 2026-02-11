@@ -49,8 +49,7 @@ import {
 } from "firebase/auth";
 
 import { EmailVerification } from "./components/EmailVerification";
-import { seedDatabase } from "./utils/seedDatabase";
-import { AdminBadge } from "./components/AdminBadge"; // <--- ADDED IMPORT
+import { AdminBadge } from "./components/AdminBadge";
 
 // Types
 export interface Transaction {
@@ -174,7 +173,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user && !loading) {
+    // Only auto-save if user exists AND is verified
+    if (user && !loading && user.emailVerified) {
       const handler = setTimeout(() => {
         handleSaveSettings();
       }, 500);
@@ -205,7 +205,8 @@ export default function App() {
   }, [user, resetInactivityTimer]);
 
   useEffect(() => {
-    if (!user) return;
+    // SAFETY CHECK: Only fetch data if user is VERIFIED
+    if (!user || !user.emailVerified) return;
 
     const transactionsQuery = query(
       collection(db, "transactions"),
@@ -251,7 +252,7 @@ export default function App() {
           budgetData.push({ 
              id: doc.id,
              category: data.category,
-             budgeted: data.budgeted || data.amount || 0, // Fallback safety
+             budgeted: data.budgeted || data.amount || 0,
              color: data.color,
              lastReset: data.lastReset || new Date(0).getTime(),
              spent: 0,
@@ -448,25 +449,6 @@ export default function App() {
     }
   };
 
-  const handleSeed = async (scenario: 'healthy' | 'crisis') => {
-    if (user) {
-      const confirmMsg = scenario === 'crisis' 
-        ? "⚠️ Load CRISIS Mode?\nThis will create overspending alerts and large transactions."
-        : "🌱 Load HEALTHY Mode?\nThis will create normal income and expense data.";
-
-      if (window.confirm(confirmMsg)) {
-        try {
-          await seedDatabase(user.uid, scenario);
-          alert("Data seeded! The page will now reload.");
-          window.location.reload(); 
-        } catch (error) {
-          console.error("Seeding error:", error);
-          alert("Failed to seed data.");
-        }
-      }
-    }
-  };
-
   const handleWelcomeComplete = (name: string, goal: number) => {
     setUserName(name);
     setSavingsGoal(goal);
@@ -529,10 +511,7 @@ export default function App() {
           
           <div className="flex items-center gap-2">
             <span className="text-sm text-black hidden sm:inline">{user?.email}</span>
-            
-            {/* ADDED: ADMIN BADGE */}
             <AdminBadge />
-
             <AlertsNotificationBell
               budgets={currentBudgets}
               transactions={transactions}
@@ -630,6 +609,7 @@ export default function App() {
                       onUpdateSavingsGoal={setSavingsGoal}
                       onUpdatePassword={handleUpdatePassword}
                       onDeleteAccount={handleDeleteAccount}
+                      userId={user.uid} // <--- CORRECTLY PASSED PROP
                     />
                   </TabsContent>
                 </Tabs>
@@ -675,27 +655,6 @@ export default function App() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Floating Demo Buttons */}
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-          <Button 
-            variant="secondary" 
-            size="sm"
-            onClick={() => handleSeed('healthy')}
-            className="shadow-lg border border-slate-200 opacity-70 hover:opacity-100 bg-white text-green-700 hover:bg-green-50"
-          >
-            🌱 Seed Healthy
-          </Button>
-          <Button 
-            variant="destructive"
-            size="sm" 
-            onClick={() => handleSeed('crisis')}
-            className="shadow-lg opacity-70 hover:opacity-100"
-          >
-            ⚠️ Seed Crisis
-          </Button>
-        </div>
-
       </div>
     </div>
   );
