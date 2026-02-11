@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Plus, TrendingDown, TrendingUp, Wallet, Target } from "lucide-react";
@@ -19,22 +20,55 @@ export function DashboardOverview({
   userName,
   savingsGoal,
 }: DashboardOverviewProps) {
-  // Calculate totals
-  const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
   
-  const totalBalance = totalIncome - totalExpenses;
-  const savings = totalBalance > 0 ? totalBalance : 0;
-  const remainingBudget = totalBudget - totalSpent;
+  // PERFORMANCE FIX: 
+  // Wrap expensive calculations in useMemo.
+  // This prevents recalculating the entire arrays on every single render cycle.
+  
+  const financialTotals = useMemo(() => {
+    const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
+    const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+    
+    // Calculate income/expenses only from active (non-archived) transactions
+    const activeTransactions = transactions.filter(t => !t.archived);
 
-  // Recent transactions (last 5)
-  const recentTransactions = transactions.slice(0, 5);
+    const totalIncome = activeTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalExpenses = activeTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalBalance = totalIncome - totalExpenses;
+    const savings = totalBalance > 0 ? totalBalance : 0;
+    const remainingBudget = totalBudget - totalSpent;
+
+    return {
+      totalBudget,
+      totalSpent,
+      totalIncome,
+      totalExpenses,
+      totalBalance,
+      savings,
+      remainingBudget
+    };
+  }, [budgets, transactions]); // Only recalculate when data changes
+
+  // Recent transactions (last 5) - Memoized to prevent slice churn
+  const recentTransactions = useMemo(() => {
+    return transactions
+      .filter(t => !t.archived)
+      .slice(0, 5);
+  }, [transactions]);
+
+  const { 
+    totalIncome, 
+    totalExpenses, 
+    totalBalance, 
+    savings, 
+    remainingBudget 
+  } = financialTotals;
 
   return (
     <div className="space-y-6">
@@ -119,7 +153,7 @@ export function DashboardOverview({
             <div className="text-2xl">${savings.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {savingsGoal > 0
-                ? `${((savings / savingsGoal) * 100).toFixed(0)}% of $${savingsGoal.toFixed(2)} goal`
+                ? `${Math.min(((savings / savingsGoal) * 100), 100).toFixed(0)}% of $${savingsGoal.toFixed(2)} goal`
                 : "Set a goal in settings"}
             </p>
           </CardContent>
@@ -127,7 +161,7 @@ export function DashboardOverview({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Budget Progress Bars - NEW SECTION */}
+        {/* Budget Progress Bars */}
         <Card className="col-span-4">
             <CardHeader>
                 <CardTitle>Budget Progress</CardTitle>
@@ -140,7 +174,6 @@ export function DashboardOverview({
                     <div key={budget.id} className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                            {/* Dynamic Color Dot */}
                             <div 
                                 className="w-3 h-3 rounded-full shadow-sm" 
                                 style={{ backgroundColor: budget.color }}
@@ -151,7 +184,6 @@ export function DashboardOverview({
                             ${budget.spent.toFixed(0)} / ${budget.budgeted}
                         </span>
                         </div>
-                        {/* Dynamic Color Progress Bar */}
                         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                         <div 
                             className="h-full transition-all duration-500" 

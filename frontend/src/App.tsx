@@ -306,6 +306,7 @@ export default function App() {
                 onAddTransaction={(t) => { addTransaction(t); setDialogOpen(false); }}
                 onEditTransaction={(t) => { if(editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
                 editingTransaction={editingTransaction}
+                budgets={budgets}
               />
             </>
           )

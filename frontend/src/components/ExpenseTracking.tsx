@@ -1,5 +1,7 @@
+import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Search } from "lucide-react";
+import { Input } from "../ui/input"; // Make sure you have this component
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "../ui/table";
@@ -28,32 +30,54 @@ export function ExpenseTracking({
   onDelete,
   onArchiveOldTransactions,
 }: ExpenseTrackingProps) {
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const todayStart = getTodayStart();
-  const ninetyDaysAgo = new Date(todayStart);
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  
-  const formatDate = (date: Date) => date.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
-  const startDate = formatDate(ninetyDaysAgo);
-  const endDate = formatDate(todayStart);
+  const { visibleTransactions, oldTransactions, dateRange } = useMemo(() => {
+      const todayStart = getTodayStart();
+      const ninetyDaysAgo = new Date(todayStart);
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      
+      // 1. Logic: Identify Old Candidates (Older than 90 days & Not Archived)
+      const old = transactions.filter(t => {
+        if (t.archived) return false;
+        const tDate = new Date(t.date);
+        tDate.setHours(0,0,0,0);
+        return tDate < ninetyDaysAgo;
+      });
 
-  // 1. Filter Logic: Last 90 Days AND Not Archived
-  const transactionsLast90Days = transactions.filter(t => {
-    if (t.archived) return false; // HIDE ARCHIVED ITEMS
+      // 2. Logic: Filter Visible (Last 90 days OR Newer & Not Archived)
+      // + Search Logic
+      const visible = transactions.filter(t => {
+        if (t.archived) return false;
+        
+        const tDate = new Date(t.date);
+        tDate.setHours(0,0,0,0);
+        
+        // Date Check
+        const isRecent = tDate >= ninetyDaysAgo;
+        if (!isRecent) return false;
 
-    const transactionDate = new Date(t.date);
-    transactionDate.setHours(0, 0, 0, 0); 
-    return transactionDate >= ninetyDaysAgo; 
-  });
-  
-  // 2. Archive Logic: Older than 90 Days AND Not Archived
-  const oldTransactions = transactions.filter(t => {
-    if (t.archived) return false; // Don't count already archived items
+        // Search Check
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+            t.description.toLowerCase().includes(searchLower) ||
+            t.category.toLowerCase().includes(searchLower) ||
+            t.amount.toString().includes(searchLower);
 
-    const transactionDate = new Date(t.date);
-    transactionDate.setHours(0, 0, 0, 0);
-    return transactionDate < ninetyDaysAgo;
-  });
+        return matchesSearch;
+      });
+
+      // Sort by date desc
+      visible.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      const formatDate = (d: Date) => d.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
+
+      return {
+          visibleTransactions: visible,
+          oldTransactions: old,
+          dateRange: `${formatDate(ninetyDaysAgo)} - ${formatDate(todayStart)}`
+      };
+  }, [transactions, searchTerm]);
 
   const handleArchiveClick = () => {
     if (oldTransactions.length === 0) {
@@ -75,32 +99,45 @@ export function ExpenseTracking({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl">Expense Tracking</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Expense Tracking</h1>
           <p className="text-muted-foreground mt-1">
-            Transactions for the last 90 days: <span className="font-semibold">{startDate} - {endDate}</span>
+            Active transactions: <span className="font-semibold">{dateRange}</span>
           </p>
         </div>
-        <div className="flex items-center space-x-4">
-          {oldTransactions.length > 0 && (
-            <Button variant="outline" onClick={handleArchiveClick} size="sm">
-                Archive {oldTransactions.length} Old Transactions
-            </Button>
-          )}
+        
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+             {/* Archive Button */}
+             {oldTransactions.length > 0 && (
+                <Button variant="outline" onClick={handleArchiveClick} size="sm" className="whitespace-nowrap">
+                    Archive {oldTransactions.length} Old
+                </Button>
+             )}
 
-          <Button onClick={onOpenAddTransaction}>
-            <Plus className="h-4 w-4" />
-            Add Transaction
-          </Button>
+            <Button onClick={onOpenAddTransaction}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Transaction
+            </Button>
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+        <Input
+            placeholder="Search transactions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 max-w-sm"
+        />
+      </div>
+
       {/* Table */}
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-white shadow-sm overflow-hidden">
         <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50/50">
                 <TableHead>Date</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
@@ -109,37 +146,39 @@ export function ExpenseTracking({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactionsLast90Days.length > 0 ? (
-                transactionsLast90Days.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-medium">
+              {visibleTransactions.length > 0 ? (
+                visibleTransactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="hover:bg-gray-50">
+                    <TableCell className="font-medium whitespace-nowrap">
                       {new Date(transaction.date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>{transaction.description}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={transaction.description}>
+                        {transaction.description}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div 
-                            className="w-3 h-3 rounded-full" 
+                            className="w-2.5 h-2.5 rounded-full ring-1 ring-black/5" 
                             style={{ backgroundColor: getCategoryColor(transaction.category) }} 
                         />
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-500/10">
                             {transaction.category}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className={`text-right font-bold ${
+                    <TableCell className={`text-right font-bold tabular-nums ${
                       transaction.type === 'income' ? 'text-green-600' : 'text-slate-900'
                     }`}>
                       {transaction.type === 'income' ? '+' : ''}
                       ${transaction.amount.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(transaction)}>
-                          <Edit2 className="h-4 w-4 text-gray-500" />
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600" onClick={() => onEdit(transaction)}>
+                          <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(transaction.id)}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600" onClick={() => onDelete(transaction.id)}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -147,8 +186,11 @@ export function ExpenseTracking({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-gray-500">
-                    No active transactions found in this period.
+                  <TableCell colSpan={5} className="h-32 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                        <Search className="h-8 w-8 text-gray-300" />
+                        <p>No transactions found matching your criteria.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

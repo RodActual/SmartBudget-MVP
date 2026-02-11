@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import type { Transaction } from "../App";
+import type { Transaction, Budget } from "../App";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -25,18 +25,8 @@ interface AddTransactionDialogProps {
   onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
   onEditTransaction: (transaction: Omit<Transaction, "id">) => void;
   editingTransaction: Transaction | null;
+  budgets: Budget[]; // <--- NEW: Accept budgets to show dynamic categories
 }
-
-const categories = [
-  "Housing",
-  "Food",
-  "Transportation",
-  "Utilities",
-  "Entertainment",
-  "Health",
-  "Income",
-  "Other",
-];
 
 export function AddTransactionDialog({
   open,
@@ -44,6 +34,7 @@ export function AddTransactionDialog({
   onAddTransaction,
   onEditTransaction,
   editingTransaction,
+  budgets, 
 }: AddTransactionDialogProps) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -51,6 +42,7 @@ export function AddTransactionDialog({
   const [type, setType] = useState<"income" | "expense">("expense");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
+  // Reset or populate form
   useEffect(() => {
     if (editingTransaction) {
       setDescription(editingTransaction.description);
@@ -86,13 +78,22 @@ export function AddTransactionDialog({
       onAddTransaction(transactionData);
     }
 
-    // Reset form
-    setDescription("");
-    setAmount("");
-    setCategory("");
-    setType("expense");
-    setDate(new Date().toISOString().split("T")[0]);
+    // Reset form logic is handled by the useEffect on open/close, 
+    // but we can clear specific fields here if needed.
+    if (!editingTransaction) {
+        setDescription("");
+        setAmount("");
+        setCategory("");
+    }
   };
+
+  // LOGIC FIX: Generate categories dynamically from Budgets
+  // We uses a Set to ensure "Income" and "Other" are always present but unique
+  const uniqueCategories = Array.from(new Set([
+    ...budgets.map(b => b.category),
+    "Income",
+    "Other"
+  ]));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,7 +138,7 @@ export function AddTransactionDialog({
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
+                  {uniqueCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>

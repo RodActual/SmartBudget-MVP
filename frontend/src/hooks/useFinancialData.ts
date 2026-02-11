@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { db } from "../firebase";
 import { 
   collection, query, where, onSnapshot, 
-  addDoc, updateDoc, deleteDoc, doc, getDocs 
+  addDoc, updateDoc, deleteDoc, doc, getDocs, 
+  orderBy, limit, writeBatch 
 } from "firebase/firestore";
 import type { Transaction, Budget } from "../App";
 
@@ -11,20 +12,28 @@ export function useFinancialData(user: any) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Data
+  // 1. Fetch Data with Performance Limits
   useEffect(() => {
     if (!user || !user.emailVerified) {
       setLoading(false);
       return;
     }
 
-    const qTransactions = query(collection(db, "transactions"), where("userId", "==", user.uid));
-    const qBudgets = query(collection(db, "budgets"), where("userId", "==", user.uid));
+    const qTransactions = query(
+      collection(db, "transactions"), 
+      where("userId", "==", user.uid),
+      orderBy("date", "desc"), 
+      limit(100) 
+    );
+
+    const qBudgets = query(
+      collection(db, "budgets"), 
+      where("userId", "==", user.uid)
+    );
 
     const unsubTrans = onSnapshot(qTransactions, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
-      // Sort by date descending
-      setTransactions(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setTransactions(data);
     });
 
     const unsubBudgets = onSnapshot(qBudgets, (snap) => {
@@ -32,26 +41,39 @@ export function useFinancialData(user: any) {
       setLoading(false);
     });
 
-    return () => { unsubTrans(); unsubBudgets(); };
+    return () => {
+      unsubTrans();
+      unsubBudgets();
+    };
   }, [user]);
 
-  // 2. Calculated Data (Current Month Spending)
+  // 2. Calculated State (Memoized)
   const currentBudgets = useMemo(() => {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    
-    const spentByCategory: Record<string, number> = {};
-    
-    transactions
-      .filter(t => t.type === 'expense' && t.date >= startOfMonth)
-      .forEach(t => {
-        spentByCategory[t.category] = (spentByCategory[t.category] || 0) + t.amount;
-      });
-    
-    return budgets.map(b => ({ ...b, spent: spentByCategory[b.category] || 0 }));
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    return budgets.map((budget) => {
+      // Calculate spent for this specific budget category in the current month
+      const spent = transactions
+        .filter((t) => {
+          const tDate = new Date(t.date);
+          return (
+            t.category === budget.category &&
+            t.type === "expense" &&
+            t.date && 
+            !t.archived && // Respect soft delete
+            tDate.getMonth() === currentMonth &&
+            tDate.getFullYear() === currentYear
+          );
+        })
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      return { ...budget, spent };
+    });
   }, [budgets, transactions]);
 
-  // 3. Actions (CRUD)
+  // 3. Handlers
   const addTransaction = async (t: Omit<Transaction, "id">) => {
     if (!user) return;
     await addDoc(collection(db, "transactions"), { ...t, userId: user.uid });
@@ -65,31 +87,48 @@ export function useFinancialData(user: any) {
     await deleteDoc(doc(db, "transactions", id));
   };
 
+  // INTEGRITY FIX: Use Atomic Batch instead of Loop
   const updateBudgets = async (newBudgets: Budget[]) => {
     if (!user) return;
-    const batchPromises = [];
     
-    // Get existing to find deletions
-    const snapshot = await getDocs(query(collection(db, "budgets"), where("userId", "==", user.uid)));
-    const existingIds = snapshot.docs.map(d => d.id);
-    const newIds = newBudgets.map(b => b.id).filter(Boolean);
+    try {
+      const batch = writeBatch(db);
+      
+      // Get existing budgets to determine what to delete
+      const snapshot = await getDocs(query(collection(db, "budgets"), where("userId", "==", user.uid)));
+      const existingIds = snapshot.docs.map(d => d.id);
+      const newIds = newBudgets.map(b => b.id).filter(Boolean) as string[];
 
-    // Update/Create
-    for (const b of newBudgets) {
-      const data = { ...b, userId: user.uid };
-      if (b.id && existingIds.includes(b.id)) {
-        batchPromises.push(updateDoc(doc(db, "budgets", b.id), data));
-      } else {
-        batchPromises.push(addDoc(collection(db, "budgets"), data));
+      // 1. Identify budgets to delete (existing but not in new list)
+      const idsToDelete = existingIds.filter(id => !newIds.includes(id));
+      idsToDelete.forEach(id => {
+        const ref = doc(db, "budgets", id);
+        batch.delete(ref);
+      });
+
+      // 2. Identify budgets to update or create
+      for (const b of newBudgets) {
+        // Ensure userId is attached for security rules
+        const data = { ...b, userId: user.uid }; 
+        
+        if (b.id && existingIds.includes(b.id)) {
+          // Update existing
+          const ref = doc(db, "budgets", b.id);
+          batch.update(ref, data);
+        } else {
+          // Create new
+          const ref = doc(collection(db, "budgets")); // Auto-ID
+          batch.set(ref, data);
+        }
       }
+
+      // 3. Commit all changes atomically
+      await batch.commit();
+      
+    } catch (error) {
+      console.error("Failed to batch update budgets:", error);
+      alert("Failed to save changes. Please try again.");
     }
-
-    // Delete removed
-    existingIds.filter(id => !newIds.includes(id)).forEach(id => {
-      batchPromises.push(deleteDoc(doc(db, "budgets", id)));
-    });
-
-    await Promise.all(batchPromises);
   };
 
   return {
@@ -100,6 +139,6 @@ export function useFinancialData(user: any) {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    updateBudgets
+    updateBudgets,
   };
 }
