@@ -2,93 +2,130 @@ import { db } from "../firebase";
 import { collection, writeBatch, doc } from "firebase/firestore";
 
 // Helper for dates
-const getRelativeDate = (daysOffset: number) => {
+const getRelativeDate = (monthsBack: number, dayOfMonth: number) => {
   const date = new Date();
-  date.setDate(date.getDate() + daysOffset);
+  date.setMonth(date.getMonth() - monthsBack);
+  date.setDate(dayOfMonth);
   return date.toISOString();
 };
 
-// SCENARIO 1: HEALTHY (Good saving habits)
-const getHealthyData = () => ({
-  budgets: [
-    // Hex codes used instead of Tailwind classes for Chart compatibility
-    { category: "Housing", budgeted: 2000, color: "#2563eb" }, // Blue-600
-    { category: "Groceries", budgeted: 600, color: "#16a34a" }, // Green-600
-    { category: "Dining Out", budgeted: 300, color: "#9333ea" }, // Purple-600
-    { category: "Entertainment", budgeted: 200, color: "#db2777" }, // Pink-600
-    { category: "Savings", budgeted: 500, color: "#059669" }, // Emerald-600
-  ],
-  transactions: [
-    { amount: 4200, category: "Income", description: "Tech Corp Salary", type: "income", days: 0 },
-    { amount: 2000, category: "Housing", description: "Monthly Rent", type: "expense", days: -2 },
-    { amount: 150, category: "Groceries", description: "Trader Joe's", type: "expense", days: -3 },
-    { amount: 45, category: "Dining Out", description: "Thai Food", type: "expense", days: -5 },
-    { amount: 120, category: "Entertainment", description: "Concert Tickets", type: "expense", days: -10 },
-  ]
-});
-
-// SCENARIO 2: CRISIS (Triggers ALL Alerts)
-const getCrisisData = () => ({
-  budgets: [
-    { category: "Housing", budgeted: 1500, color: "#2563eb" }, // Blue-600
-    { category: "Dining Out", budgeted: 200, color: "#ea580c" }, // Orange-600
-    { category: "Emergency", budgeted: 1000, color: "#dc2626" }, // Red-600
-    { category: "Medical", budgeted: 500, color: "#0d9488" }, // Teal-600
-  ],
-  transactions: [
-    // 1. Large Transaction Alert (> $500)
-    { amount: 1200, category: "Emergency", description: "Car Transmission Repair", type: "expense", days: 0 }, 
-    
-    // 2. Budget Exceeded Alert (Dining Out > $200)
-    { amount: 150, category: "Dining Out", description: "Fancy Anniversary Dinner", type: "expense", days: -1 },
-    { amount: 80, category: "Dining Out", description: "Brunch w/ Friends", type: "expense", days: -3 }, // Total $230 (115%)
-
-    // 3. Budget Warning Alert (Housing at 100%)
-    { amount: 1500, category: "Housing", description: "Rent Payment", type: "expense", days: -5 },
-
-    // 4. Medical Expense
-    { amount: 350, category: "Medical", description: "Urgent Care Copay", type: "expense", days: -6 },
-
-    // 5. Low Income (Negative Cashflow)
-    { amount: 2000, category: "Income", description: "Paycheck (Half)", type: "income", days: -10 },
-  ]
-});
+// Helper to add random "noise" to a value (+/- percentage)
+const addVolatility = (value: number, intensity: number = 0.2) => {
+  const change = value * intensity;
+  return value + (Math.random() * (change * 2) - change);
+};
 
 export const seedDatabase = async (userId: string, scenario: 'healthy' | 'crisis' = 'healthy') => {
   const batch = writeBatch(db);
   
-  // Select Data Source
-  const data = scenario === 'crisis' ? getCrisisData() : getHealthyData();
+  // 1. SET UP THE BUDGETS
+  const budgetList = scenario === 'healthy' 
+    ? [
+        { category: "Housing", budgeted: 2000, color: "#2563eb" },
+        { category: "Groceries", budgeted: 600, color: "#16a34a" },
+        { category: "Dining Out", budgeted: 300, color: "#9333ea" },
+        { category: "Entertainment", budgeted: 250, color: "#db2777" },
+        { category: "Savings", budgeted: 500, color: "#059669" },
+      ]
+    : [
+        { category: "Housing", budgeted: 1500, color: "#2563eb" },
+        { category: "Dining Out", budgeted: 200, color: "#ea580c" },
+        { category: "Emergency", budgeted: 1000, color: "#dc2626" },
+        { category: "Medical", budgeted: 400, color: "#0d9488" },
+      ];
 
-  console.log(`Seeding ${scenario} scenario for user ${userId}...`);
-
-  // 1. Add Budgets
-  data.budgets.forEach((b) => {
-    const newDocRef = doc(collection(db, "budgets"));
-    batch.set(newDocRef, {
+  budgetList.forEach((b) => {
+    const bRef = doc(collection(db, "budgets"));
+    batch.set(bRef, {
       userId,
-      category: b.category,
-      budgeted: b.budgeted,
-      color: b.color,
-      spent: 0, 
+      ...b,
+      spent: 0,
       lastReset: Date.now(),
       createdAt: new Date().toISOString(),
     });
   });
 
-  // 2. Add Transactions
-  data.transactions.forEach((t) => {
-    const newDocRef = doc(collection(db, "transactions"));
-    batch.set(newDocRef, {
+  // 2. GENERATE 12 MONTHS OF INCONSISTENT TRANSACTIONS
+  for (let i = 0; i < 12; i++) {
+    // A. INCOME: Mostly stable but with occasional "valleys" or "hills" (Side hustles/Bonuses)
+    const baseIncome = scenario === 'healthy' ? 4200 : 3000;
+    const monthlyIncome = (i === 4 || i === 8) ? baseIncome * 1.25 : baseIncome; // Two "Hills" for bonuses
+    
+    const incRef = doc(collection(db, "transactions"));
+    batch.set(incRef, {
       userId,
-      amount: t.amount,
-      category: t.category,
-      description: t.description,
-      type: t.type,
-      date: getRelativeDate(t.days),
+      amount: monthlyIncome,
+      category: "Income",
+      description: i === 4 || i === 8 ? "Salary + Bonus" : "Monthly Paycheck",
+      type: "income",
+      date: getRelativeDate(i, 1),
     });
-  });
+
+    // B. HOUSING: Always stable (The "Flatline")
+    const rentRef = doc(collection(db, "transactions"));
+    batch.set(rentRef, {
+      userId,
+      amount: scenario === 'healthy' ? 2000 : 1500,
+      category: "Housing",
+      description: "Monthly Rent",
+      type: "expense",
+      date: getRelativeDate(i, 2),
+    });
+
+    // C. GROCERIES: High volatility (Hills and Valleys)
+    // Simulating "Stock up months" vs "Eating from the pantry months"
+    const groceryRef = doc(collection(db, "transactions"));
+    batch.set(groceryRef, {
+      userId,
+      amount: addVolatility(550, 0.35), // High volatility for visual "jaggedness"
+      category: "Groceries",
+      description: "Grocery Run",
+      type: "expense",
+      date: getRelativeDate(i, 12),
+    });
+
+    // D. DINING & ENTERTAINMENT: Massive peaks for holidays/celebrations
+    const isHighSpendingMonth = i === 2 || i === 6 || i === 11; // March, July, December peaks
+    const diningAmount = isHighSpendingMonth ? 600 : addVolatility(200, 0.5);
+    
+    const diningRef = doc(collection(db, "transactions"));
+    batch.set(diningRef, {
+      userId,
+      amount: diningAmount,
+      category: "Dining Out",
+      description: isHighSpendingMonth ? "Celebration/Holiday Dinner" : "Casual Dining",
+      type: "expense",
+      date: getRelativeDate(i, 22),
+    });
+
+    // E. THE "CRISIS" SPIKE (Only for Scenario 2, Month 0)
+    if (scenario === 'crisis' && i === 0) {
+      const crisisRef = doc(collection(db, "transactions"));
+      batch.set(crisisRef, {
+        userId,
+        amount: 1250,
+        category: "Emergency",
+        description: "Emergency Root Canal",
+        type: "expense",
+        date: getRelativeDate(i, 15),
+      });
+    }
+
+    // F. RANDOM OUTLIERS (The "Valleys")
+    // Every few months, add a small unexpected expense to keep the chart interesting
+    if (i % 3 === 0) {
+      const miscRef = doc(collection(db, "transactions"));
+      batch.set(miscRef, {
+        userId,
+        amount: addVolatility(100, 0.8),
+        category: scenario === 'healthy' ? "Entertainment" : "Medical",
+        description: "Unexpected Cost",
+        type: "expense",
+        date: getRelativeDate(i, 28),
+      });
+    }
+  }
 
   await batch.commit();
-  console.log("Database seeded successfully!");
+  console.log(`Successfully seeded 12 months of ${scenario} data with jagged trends.`);
 };
