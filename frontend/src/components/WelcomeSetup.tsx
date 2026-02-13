@@ -55,7 +55,7 @@ export function WelcomeSetup({ userId, onComplete }: WelcomeSetupProps) {
             <Sparkles className="w-6 h-6 text-blue-600" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Welcome to SmartBudget!
+            Welcome to FortisBudget!
           </CardTitle>
           <CardDescription>
             Let's personalize your experience in just two quick steps.

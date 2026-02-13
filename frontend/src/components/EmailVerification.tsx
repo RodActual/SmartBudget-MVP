@@ -106,7 +106,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
         <CheckCircle className="h-4 w-4 text-green-600" />
         <AlertTitle className="text-green-900">Email Verified</AlertTitle>
         <AlertDescription className="text-green-800">
-          Your email has been verified. You have full access to SmartBudget.
+          Your email has been verified. You have full access to FortisBudget.
         </AlertDescription>
       </Alert>
     );
