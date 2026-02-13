@@ -23,6 +23,8 @@ import {
   AdminBadge 
 } from "./components";
 
+import { FortisLogo } from "./components/FortisLogo";
+
 // UI
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
@@ -226,14 +228,12 @@ export default function App() {
         {/* Fortis Header */}
         <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl shadow-sm p-4 overflow-hidden">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg shadow-inner">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-sm">
-                F
-              </div>
-              <h1 className="text-xl font-bold tracking-tight text-white uppercase">
-                FortisBudget
-              </h1>
-            </div>
+<div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg">
+  <FortisLogo className="h-8 w-8" />
+  <h1 className="text-xl font-bold tracking-tight text-white uppercase">
+    FortisBudget
+  </h1>
+</div>
             <p className="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
               Financial Strength Through Intentionality
             </p>
