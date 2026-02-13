@@ -130,10 +130,6 @@ FortisBudget/
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tsconfig.json
-├── backend/                      # Exploratory backend (not used in production)
-│   ├── routes/                   # Flask routes (reference only)
-│   ├── utils/                    # Firebase utilities
-│   └── requirements.txt
 └── README.md
 ```
 
