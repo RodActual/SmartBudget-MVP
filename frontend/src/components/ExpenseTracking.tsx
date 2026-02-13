@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Plus, Edit2, Trash2, Search } from "lucide-react";
-import { Input } from "../ui/input"; // Make sure you have this component
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "../ui/table";
@@ -19,7 +18,8 @@ interface ExpenseTrackingProps {
   onOpenAddTransaction: () => void;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
-  onArchiveOldTransactions: (oldTransactionIds: string[]) => Promise<void>;
+  // Updated to match the prop passed from App.tsx
+  onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
 }
 
 export function ExpenseTracking({
@@ -28,7 +28,7 @@ export function ExpenseTracking({
   onOpenAddTransaction,
   onEdit,
   onDelete,
-  onArchiveOldTransactions,
+  onUpdateTransaction,
 }: ExpenseTrackingProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -46,18 +46,15 @@ export function ExpenseTracking({
       });
 
       // 2. Logic: Filter Visible (Last 90 days OR Newer & Not Archived)
-      // + Search Logic
       const visible = transactions.filter(t => {
         if (t.archived) return false;
         
         const tDate = new Date(t.date);
         tDate.setHours(0,0,0,0);
         
-        // Date Check
         const isRecent = tDate >= ninetyDaysAgo;
         if (!isRecent) return false;
 
-        // Search Check
         const searchLower = searchTerm.toLowerCase();
         const matchesSearch = 
             t.description.toLowerCase().includes(searchLower) ||
@@ -67,7 +64,6 @@ export function ExpenseTracking({
         return matchesSearch;
       });
 
-      // Sort by date desc
       visible.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       const formatDate = (d: Date) => d.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
@@ -79,15 +75,18 @@ export function ExpenseTracking({
       };
   }, [transactions, searchTerm]);
 
-  const handleArchiveClick = () => {
-    if (oldTransactions.length === 0) {
-        alert("No active transactions older than 90 days found.");
-        return;
-    }
+  const handleArchiveClick = async () => {
+    if (oldTransactions.length === 0) return;
     
     if (window.confirm(`Archive ${oldTransactions.length} transactions older than 90 days? They will be hidden from this list but remain in your charts.`)) {
-        const oldIds = oldTransactions.map(t => t.id);
-        onArchiveOldTransactions(oldIds);
+        try {
+          // Use the updated handler to archive each transaction
+          await Promise.all(oldTransactions.map(t => onUpdateTransaction(t.id, { archived: true })));
+          alert(`Successfully archived ${oldTransactions.length} transactions.`);
+        } catch (error) {
+          console.error("Archive failed:", error);
+          alert("An error occurred while archiving.");
+        }
     }
   };
 
@@ -101,58 +100,65 @@ export function ExpenseTracking({
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Expense Tracking</h1>
-          <p className="text-muted-foreground mt-1">
-            Active transactions: <span className="font-semibold">{dateRange}</span>
+          <h1 className="text-3xl font-bold tracking-tight text-[#001D3D]">Expense Tracking</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Active view: <span className="font-semibold text-slate-700">{dateRange}</span>
           </p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-             {/* Archive Button */}
              {oldTransactions.length > 0 && (
-                <Button variant="outline" onClick={handleArchiveClick} size="sm" className="whitespace-nowrap">
+                <Button variant="outline" onClick={handleArchiveClick} size="sm" className="whitespace-nowrap border-slate-200 text-slate-600">
                     Archive {oldTransactions.length} Old
                 </Button>
              )}
 
-            <Button onClick={onOpenAddTransaction}>
+            <Button onClick={onOpenAddTransaction} className="bg-blue-600 hover:bg-blue-700 shadow-sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Transaction
             </Button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-        <Input
+      {/* SEARCH BAR - Isolated Prefix Design */}
+      <div className="max-w-md">
+        <div className="group flex items-center w-full rounded-md border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all overflow-hidden">
+          
+          {/* Isolated Icon Container */}
+          <div className="flex items-center justify-center w-10 h-10 bg-slate-50 border-r border-slate-200 text-slate-400 group-focus-within:text-blue-500 group-focus-within:bg-blue-50/30">
+            <Search className="h-4 w-4" />
+          </div>
+
+          <input
+            type="text"
             placeholder="Search transactions..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 max-w-sm"
-        />
+            className="flex-1 h-10 px-3 bg-transparent text-sm outline-none placeholder:text-slate-400"
+          />
+        </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-md border bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50/50">
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="bg-slate-50/50 hover:bg-transparent">
+                <TableHead className="font-semibold text-slate-900">Date</TableHead>
+                <TableHead className="font-semibold text-slate-900">Description</TableHead>
+                <TableHead className="font-semibold text-slate-900">Category</TableHead>
+                <TableHead className="text-right font-semibold text-slate-900">Amount</TableHead>
+                <TableHead className="text-right font-semibold text-slate-900">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {visibleTransactions.length > 0 ? (
                 visibleTransactions.map((transaction) => (
-                  <TableRow key={transaction.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium whitespace-nowrap">
+                  <TableRow key={transaction.id} className="hover:bg-slate-50/50 transition-colors">
+                    <TableCell className="text-sm text-slate-600 whitespace-nowrap">
                       {new Date(transaction.date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={transaction.description}>
+                    <TableCell className="max-w-[200px] truncate font-medium text-slate-900" title={transaction.description}>
                         {transaction.description}
                     </TableCell>
                     <TableCell>
@@ -161,23 +167,23 @@ export function ExpenseTracking({
                             className="w-2.5 h-2.5 rounded-full ring-1 ring-black/5" 
                             style={{ backgroundColor: getCategoryColor(transaction.category) }} 
                         />
-                        <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-500/10">
+                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                             {transaction.category}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className={`text-right font-bold tabular-nums ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-slate-900'
+                      transaction.type === 'income' ? 'text-emerald-600' : 'text-slate-900'
                     }`}>
                       {transaction.type === 'income' ? '+' : ''}
-                      ${transaction.amount.toFixed(2)}
+                      ${transaction.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600" onClick={() => onEdit(transaction)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(transaction)}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600" onClick={() => onDelete(transaction.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => onDelete(transaction.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -186,10 +192,11 @@ export function ExpenseTracking({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-gray-500">
+                  <TableCell colSpan={5} className="h-48 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
-                        <Search className="h-8 w-8 text-gray-300" />
-                        <p>No transactions found matching your criteria.</p>
+                        <Search className="h-10 w-10 text-slate-200" />
+                        <p className="font-medium">No transactions found</p>
+                        <p className="text-xs">Adjust your search or check your archived data.</p>
                     </div>
                   </TableCell>
                 </TableRow>

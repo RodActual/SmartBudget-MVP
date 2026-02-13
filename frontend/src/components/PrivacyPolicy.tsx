@@ -23,41 +23,45 @@ export function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Information We Collect</h2>
             <p>
-              We only ask for personal information when we truly need it to provide a service to you. 
+              We only ask for personal information when we truly need it to provide a secure budgeting service to you. 
               We collect it by fair and lawful means, with your knowledge and consent. 
-              Currently, we collect your email address for account authentication purposes.
+              Currently, we collect your email address for account authentication and security purposes.
             </p>
           </section>
           
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">2. Data Usage</h2>
             <p>
-              We use your data to provide the expense tracking and budgeting features of SmartBudget. 
+              We use your data to provide the expense tracking and budgeting features of FortisBudget. 
               Your financial data is stored securely in our database and is only accessible by you. 
-              We do not sell or share your personal data with third-party advertisers.
+              We do not sell or share your personal data with third-party advertisers or data brokers.
             </p>
           </section>
           
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">3. Security</h2>
             <p>
-              We value your trust in providing us your Personal Information, thus we are striving to use commercially acceptable means of protecting it. 
-              We utilize industry-standard encryption and authentication services provided by Google Firebase.
+              Financial strength requires a secure foundation. We utilize industry-standard encryption and 
+              authentication services provided by Google Firebase to protect your Personal Information. 
+              While we strive to use commercially acceptable means of protection, no method of transmission 
+              over the internet is 100% secure.
             </p>
           </section>
           
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">4. Changes to This Policy</h2>
             <p>
-              We may update our Privacy Policy from time to time. Thus, we advise you to review this page periodically for any changes. 
-              We will notify you of any changes by posting the new Privacy Policy on this page.
+              We may update our Privacy Policy from time to time to reflect changes in our service or 
+              security protocols. We advise you to review this page periodically. 
+              Changes are effective immediately upon being posted to this page.
             </p>
           </section>
           
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">5. Contact Us</h2>
             <p>
-              If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us support@smartbudget.app.
+              If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact our 
+              support team at <span className="font-semibold text-blue-600">support@fortisbudget.com</span>.
             </p>
           </section>
         </div>

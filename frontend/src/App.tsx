@@ -2,8 +2,7 @@ import "./globals.css";
 import { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
-// ADDED: writeBatch to imports
-import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore"; 
+import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore"; 
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 // Components
@@ -153,6 +152,11 @@ export default function App() {
     setAuthMode('landing');
   };
 
+  const handleLegalBack = () => {
+    // Navigating back simply clears the overlay state
+    setAuthMode('landing');
+  };
+
   const handleUpdatePassword = async (current: string, newPass: string) => {
     if (!user) return { success: false, error: "No user" };
     try {
@@ -163,34 +167,20 @@ export default function App() {
     } catch (e: any) { return { success: false, error: e.message }; }
   };
 
-  // --- SECURITY FIX: Orphaned Data Prevention ---
   const handleDeleteAccount = async (pass: string) => {
     if (!user) return { success: false, error: "No user" };
     try {
-      // 1. Re-authenticate first
       const cred = EmailAuthProvider.credential(user.email!, pass);
       await reauthenticateWithCredential(user, cred);
-      
       const uid = user.uid;
-      
-      // 2. Query all user data
       const tSnaps = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
       const bSnaps = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
-      
-      // 3. Perform ATOMIC deletion using writeBatch
-      // This is safer and cleaner than Promise.all() for Firestore ops
       const batch = writeBatch(db);
-      
       tSnaps.docs.forEach(d => batch.delete(d.ref));
       bSnaps.docs.forEach(d => batch.delete(d.ref));
       batch.delete(doc(db, "userSettings", uid));
-      
-      // 4. Commit the batch BEFORE deleting the user
       await batch.commit();
-      
-      // 5. Delete the Auth User last
       await deleteUser(user);
-      
       return { success: true };
     } catch (e: any) { 
       console.error("Delete Account Error:", e);
@@ -198,15 +188,12 @@ export default function App() {
     }
   };
 
-  // --- NEW: Soft Delete Logic ---
-  const handleArchiveOld = async (ids: string[]) => {
-      // Instead of deleteTransaction, we update the transaction to be archived
-      await Promise.all(ids.map(id => updateTransaction(id, { archived: true })));
-      alert(`Archived ${ids.length} transactions. They will still appear in charts.`);
-  };
-
   // --- 7. RENDERING ---
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-xl">Loading...</div>;
+
+  // Global Legal Overlays (Priority Rendering)
+  if (authMode === 'privacy') return <PrivacyPolicy onBack={handleLegalBack} />;
+  if (authMode === 'terms') return <TermsOfService onBack={handleLegalBack} />;
 
   if (!user) {
     if (authMode === 'login' || authMode === 'signup') {
@@ -221,29 +208,45 @@ export default function App() {
         </div>
       );
     }
-    if (authMode === 'privacy') return <PrivacyPolicy onBack={() => setAuthMode('landing')} />;
-    if (authMode === 'terms') return <TermsOfService onBack={() => setAuthMode('landing')} />;
-    return <LandingPage onGetStarted={() => setAuthMode('signup')} onSignIn={() => setAuthMode('login')} onOpenPrivacy={() => setAuthMode('privacy')} onOpenTerms={() => setAuthMode('terms')} />;
+    
+    return (
+      <LandingPage 
+        onGetStarted={() => setAuthMode('signup')} 
+        onSignIn={() => setAuthMode('login')} 
+        onOpenPrivacy={() => setAuthMode('privacy')} 
+        onOpenTerms={() => setAuthMode('terms')} 
+      />
+    );
   }
 
   return (
     <div className="min-h-screen bg-white relative">
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         
-        {/* Header */}
-        <div className="flex items-center justify-between bg-gray-200 rounded-lg shadow-md p-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-black">FortisBudget</h1>
-            <p className="text-sm text-black mt-1">Your personal finance manager</p>
+        {/* Fortis Header */}
+        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl shadow-sm p-4 overflow-hidden">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg shadow-inner">
+              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-sm">
+                F
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-white uppercase">
+                FortisBudget
+              </h1>
+            </div>
+            <p className="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+              Financial Strength Through Intentionality
+            </p>
           </div>
+
           <div className="flex items-center gap-2">
-            <span className="text-sm text-black hidden sm:inline">{user?.email}</span>
+            <span className="text-sm text-slate-500 font-medium hidden sm:inline">{user?.email}</span>
             <AdminBadge />
             <AlertsNotificationBell 
               budgets={currentBudgets} transactions={transactions} 
               alertSettings={alertSettings} onUpdateAlertSettings={setAlertSettings} 
             />
-            <Button onClick={handleLogout} variant="destructive" size="sm">
+            <Button onClick={handleLogout} variant="destructive" size="sm" className="shadow-sm">
               <LogOut className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Logout</span>
             </Button>
           </div>
@@ -261,7 +264,7 @@ export default function App() {
           ) : (
             <>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-5 bg-gray-100 h-auto sm:h-10">
+                <TabsList className="grid w-full grid-cols-5 bg-slate-100 h-auto sm:h-10 p-1 border border-slate-200">
                   <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4"/><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
                   <TabsTrigger value="expenses" className="gap-2"><Receipt className="h-4 w-4"/><span className="hidden sm:inline">Expenses</span></TabsTrigger>
                   <TabsTrigger value="insights" className="gap-2"><BarChart3 className="h-4 w-4"/><span className="hidden sm:inline">Insights</span></TabsTrigger>
@@ -280,12 +283,11 @@ export default function App() {
                     onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                     onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
                     onDelete={deleteTransaction} 
-                    onArchiveOldTransactions={handleArchiveOld} 
+                    onUpdateTransaction={updateTransaction} 
                   />
                 </TabsContent>
                 
                 <TabsContent value="insights" className="mt-6">
-                  {/* We pass ALL transactions (including archived) to Charts so history remains */}
                   <ChartsInsights budgets={currentBudgets} transactions={transactions} onUpdateBudgets={updateBudgets} />
                 </TabsContent>
                 
@@ -297,9 +299,18 @@ export default function App() {
                     userName={userName} onUpdateUserName={setUserName} 
                     savingsGoal={savingsGoal} onUpdateSavingsGoal={setSavingsGoal}
                     onUpdatePassword={handleUpdatePassword} onDeleteAccount={handleDeleteAccount}
+                    onOpenPrivacy={() => setAuthMode('privacy')}
+                    onOpenTerms={() => setAuthMode('terms')}
                   />
                 </TabsContent>
               </Tabs>
+
+              {/* Internal Legal Footer */}
+              <div className="flex justify-center gap-6 mt-8 pb-8 text-[10px] text-slate-400 uppercase tracking-widest">
+                <button onClick={() => setAuthMode('privacy')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
+                <button onClick={() => setAuthMode('terms')} className="hover:text-blue-600 transition-colors">Terms of Service</button>
+                <span>&copy; 2026 FortisBudget</span>
+              </div>
 
               <AddTransactionDialog 
                 open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if(!open) setEditingTransaction(null); }}
@@ -311,9 +322,9 @@ export default function App() {
             </>
           )
         ) : (
-          <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl mt-6">
-            <h2 className="text-2xl font-bold">Email Verification Required</h2>
-            <p className="text-gray-600 mt-2">Please check the banner above.</p>
+          <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-xl mt-6 bg-slate-50">
+            <h2 className="text-2xl font-bold text-slate-800">Email Verification Required</h2>
+            <p className="text-slate-500 mt-2 max-w-sm mx-auto">To protect your financial data, please verify your email address using the banner at the top of the page.</p>
           </div>
         )}
 
