@@ -233,7 +233,7 @@ export default function App() {
         {/* Header */}
         <div className="flex items-center justify-between bg-gray-200 rounded-lg shadow-md p-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-black">SmartBudget</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-black">FortisBudget</h1>
             <p className="text-sm text-black mt-1">Your personal finance manager</p>
           </div>
           <div className="flex items-center gap-2">

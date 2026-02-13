@@ -162,7 +162,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="text-center max-w-3xl mx-auto space-y-12" style={{ rowGap: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
-                SmartBudget
+                FortisBudget
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
                 Build better money habits through intentional tracking. No bank connections, no automated imports. Just you, your goals, and complete control.
@@ -187,7 +187,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
         <section id="features" className="py-20 bg-white border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16 max-w-2xl mx-auto space-y-6" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', rowGap: '1rem' }}>
-              <h2 className="text-2xl mt-8 font-bold text-black-600 tracking-wide uppercase">Why SmartBudget?</h2>
+              <h2 className="text-2xl mt-8 font-bold text-black-600 tracking-wide uppercase">Why FortisBudget?</h2>
               <p className="text-lg text-gray-600 leading-relaxed">Most apps track your spending. We change your behavior.</p>
             </div>
 
@@ -279,7 +279,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
                   Proactive defense for your wallet.
                 </h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Most apps tell you after you've blown your budget. SmartBudget warns you before it happens.
+                  Most apps tell you after you've blown your budget. FortisBudget warns you before it happens.
                   <br /><br />
                   Set configurable thresholds (50-95%) and catch large transactions instantly.
                 </p>
@@ -363,7 +363,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
         <footer className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-8">
             <div className="flex flex-col items-center gap-4">
-              <span className="text-2xl font-bold text-white tracking-tight">SmartBudget</span>
+              <span className="text-2xl font-bold text-white tracking-tight">FortisBudget</span>
               <p className="text-gray-500 text-center max-w-md leading-relaxed">
                 Built for intentional spenders who want to take manual control of their financial future.
               </p>
@@ -375,7 +375,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
             </div>
 
             <p className="text-gray-600 mt-6 text-xs">
-              &copy; {new Date().getFullYear()} SmartBudget. All rights reserved.
+              &copy; {new Date().getFullYear()} FortisBudget. All rights reserved.
             </p>
           </div>
         </footer>
