@@ -1,0 +1,22 @@
+# FortisBudget Robots.txt
+# Financial Strength Through Intentionality
+
+User-agent: *
+
+# Allow crawling of public-facing brand pages
+Allow: /
+Allow: /privacy
+Allow: /terms
+
+# Disallow crawling of internal application routes
+# We don't want these showing up in search results
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /login
+Disallow: /signup
+Disallow: /admin
+Disallow: /verification
+
+# Host and Sitemap location
+Host: https://fortisbudget.com
+Sitemap: https://fortisbudget.com/sitemap.xml
