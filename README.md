@@ -44,7 +44,7 @@ FortisBudget is a completely free, full-featured budgeting tool that helps you t
 
 - **Firebase Authentication** - secure email/password login
 - **Password management** - change password with re-authentication
-- **Inactivity auto-logout** - 15-minute timeout with 2-minute warning (unique feature!)
+- **Inactivity auto-logout** - 15-minute timeout with 2-minute warning
 - **Full account deletion** - complete data cleanup (transactions, budgets, settings)
 - **No data monetization** - your data stays yours, forever
 - **Firestore security rules** - user data isolation at database level
@@ -70,7 +70,7 @@ FortisBudget is a completely free, full-featured budgeting tool that helps you t
 - **Recharts** - Composable charting library for data visualization
 - **Lucide React** - Beautiful icon system
 
-### Backend
+### Backend & Database
 
 - **Firebase Authentication** - User management and security
 - **Firestore** - Real-time NoSQL database with automatic scaling
@@ -84,7 +84,7 @@ FortisBudget is a completely free, full-featured budgeting tool that helps you t
 
 ### Key Architecture Decisions
 
-- **Serverless design** - No backend server to maintain (Firebase handles it)
+- **Serverless design** - No backend server to maintain (Firebase handles everything)
 - **Real-time listeners** - onSnapshot for instant UI updates
 - **Client-side calculations** - Budget spent amounts calculated from transactions
 - **Zero operational cost** - Firebase free tier supports 50K reads/day
@@ -107,79 +107,103 @@ FortisBudget/
 │   │   │   ├── SpendingChart.tsx           # Line chart for trends
 │   │   │   └── TransactionsTable.tsx       # Table view of transactions
 │   │   ├── ui/                  # shadcn/ui components
-│   │   │   ├── alert-dialog.tsx
-│   │   │   ├── alert.tsx
-│   │   │   ├── badge.tsx
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── dialog.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── label.tsx
-│   │   │   ├── popover.tsx
-│   │   │   ├── select.tsx
-│   │   │   ├── switch.tsx
-│   │   │   ├── table.tsx
-│   │   │   ├── tabs.tsx
-│   │   │   └── utils.tsx
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── utils/               # Utility functions
 │   │   ├── App.tsx              # Main application component
 │   │   ├── firebase.js          # Firebase configuration
 │   │   ├── globals.css          # Global styles and Tailwind config
 │   │   └── main.jsx             # Application entry point
 │   ├── public/
-│   │   └── FortisBudget-logo.png
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tsconfig.json
+├── .env.example                 # Environment variable template
+├── SECURITY.md                  # Security documentation
+├── ENVIRONMENT_SETUP.md         # Setup guide
 └── README.md
 ```
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18+ and npm/yarn
-- Firebase account (free tier)
-- Vercel account (optional, for deployment)
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ and npm/yarn
-- Firebase account (free tier)
-- Vercel account (optional, for deployment)
-
-### Installation
-
 **For complete setup instructions, see [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md)**
 
-Quick start:
+### Prerequisites
 
-1. Clone and install dependencies
+- Node.js 18+ and npm/yarn
+- Firebase account (free tier)
+- Vercel account (optional, for deployment)
+
+### Quick Start
+
+1. **Clone the repository**
+
 ```bash
-   git clone https://github.com/RodActual/FortisBudget.git
-   cd FortisBudget/frontend
-   npm install
+git clone https://github.com/RodActual/FortisBudget.git
+cd FortisBudget/frontend
 ```
 
-2. Set up environment variables
+2. **Install dependencies**
+
 ```bash
-   cp .env.example .env
-   # Edit .env with your Firebase credentials
+npm install
 ```
 
-3. Configure Firebase (see ENVIRONMENT_SETUP.md for details)
-   - Create Firebase project
-   - Enable Authentication (Email/Password)
-   - Enable Firestore Database
-   - Deploy Security Rules
+3. **Set up Firebase**
 
-4. Run development server
+- Create a new Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+- Enable **Authentication** (Email/Password provider)
+- Enable **Firestore Database** (production mode)
+- Copy your Firebase config
+
+4. **Configure environment variables**
+
 ```bash
-   npm run dev
+cp .env.example .env
+# Edit .env with your Firebase credentials
 ```
 
-For security best practices, see [SECURITY.md](./SECURITY.md)
+See [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md) for detailed Firebase setup instructions.
+
+5. **Set up Firestore security rules**
+
+In Firebase Console → Firestore Database → Rules, paste:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User settings
+    match /userSettings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Transactions - user can only access their own
+    match /transactions/{transactionId} {
+      allow read, write: if request.auth != null && 
+                           resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Budgets - user can only access their own
+    match /budgets/{budgetId} {
+      allow read, write: if request.auth != null && 
+                           resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid;
+    }
+  }
+}
+```
+
+6. **Run development server**
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:5173` to see the app running locally.
+
 ### Building for Production
 
 ```bash
@@ -191,11 +215,6 @@ npm run preview  # Test production build locally
 
 ### Collections
 
-#### `users` (created by Firebase Auth)
-
-- Managed automatically by Firebase Authentication
-- User profiles stored in `userSettings` collection
-
 #### `userSettings`
 
 ```javascript
@@ -206,12 +225,12 @@ npm run preview  # Test production build locally
   notificationsEnabled: boolean,
   alertSettings: {
     budgetWarningEnabled: boolean,
-    budgetWarningThreshold: number,  // Percentage (e.g., 80)
+    budgetWarningThreshold: number,
     budgetExceededEnabled: boolean,
     largeTransactionEnabled: boolean,
-    largeTransactionAmount: number,  // Dollar amount (e.g., 500)
+    largeTransactionAmount: number,
     weeklyReportEnabled: boolean,
-    dismissedAlertIds: string[]      // Persistent dismissed alerts
+    dismissedAlertIds: string[]
   },
   updatedAt: string           // ISO timestamp
 }
@@ -226,7 +245,8 @@ npm run preview  # Test production build locally
   description: string,        // Transaction description
   category: string,           // Budget category
   amount: number,             // Dollar amount
-  type: "income" | "expense"  // Transaction type
+  type: "income" | "expense", // Transaction type
+  archived: boolean           // Soft delete flag
 }
 ```
 
@@ -242,15 +262,6 @@ npm run preview  # Test production build locally
   // Note: 'spent' is calculated client-side from transactions
 }
 ```
-
-### Data Flow
-
-1. **User logs in** → Firebase Auth creates session
-2. **App loads** → onSnapshot listeners subscribe to user’s data
-3. **User adds transaction** → addDoc to Firestore
-4. **Firestore updates** → onSnapshot fires → React re-renders
-5. **Budget calculation** → Client-side aggregation of current month’s transactions
-6. **Alerts generated** → Compared against alertSettings, filtered by dismissedAlertIds
 
 ## Design Philosophy
 
@@ -280,6 +291,26 @@ Built specifically for students and young professionals:
 - No methodology lock-in (use any budgeting style)
 - Free forever (no premium tier upsells)
 
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Go to [Vercel](https://vercel.com) and import your repository
+3. Add environment variables (all `VITE_FIREBASE_*` values)
+4. Deploy!
+
+Vercel will automatically deploy on every push to main.
+
+### Firebase Hosting
+
+```bash
+npm run build
+firebase login
+firebase init hosting
+firebase deploy
+```
+
 ## Feature Roadmap
 
 ### Completed (MVP)
@@ -297,48 +328,16 @@ Built specifically for students and young professionals:
 - [x] Savings goal tracking
 - [x] Persistent alert dismissal
 
-### In Progress
+### Planned Features
 
 - [ ] Recurring transactions
 - [ ] Data export (CSV/PDF)
 - [ ] PWA for mobile install
-- [ ] Onboarding tutorial
-
-### Planned Features
-
 - [ ] Plaid integration for bank sync (optional)
-- [ ] Extended history options (30/90/180/365 days)
 - [ ] Dark mode
-- [ ] Native mobile apps (iOS/Android)
 - [ ] Multi-user/household budgets
-- [ ] Localization (Spanish, French, German, Mandarin)
-- [ ] 2FA (two-factor authentication)
 - [ ] Budget templates
 - [ ] Goal forecasting
-- [ ] Spending insights and patterns
-
-## Testing
-
-### Manual Testing Checklist
-
-- [x] User registration and login
-- [x] Transaction CRUD operations
-- [x] Budget creation and editing
-- [x] Real-time sync across browser tabs
-- [x] Alert generation and dismissal
-- [x] Monthly budget reset logic
-- [x] 90-day archive functionality
-- [x] Password change flow
-- [x] Account deletion with data cleanup
-- [x] Inactivity timeout and warning
-- [x] Responsive design (desktop, tablet, mobile)
-
-### Future Testing
-
-- [ ] Firebase emulator for local testing
-- [ ] Jest/React Testing Library for unit tests
-- [ ] Cypress for E2E testing
-- [ ] Lighthouse for performance auditing
 
 ## Contributing
 
@@ -347,10 +346,10 @@ Contributions are welcome! This project is being developed as part of a universi
 ### Development Guidelines
 
 1. Fork the repository
-1. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-1. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-1. Push to the branch (`git push origin feature/AmazingFeature`)
-1. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ### Code Style
 
@@ -360,9 +359,19 @@ Contributions are welcome! This project is being developed as part of a universi
 - Keep components small and focused
 - Comment complex logic
 
+## Security
+
+For security guidelines and best practices, see [SECURITY.md](./SECURITY.md)
+
+Key points:
+- Firebase API keys are public identifiers (not secret)
+- Security comes from Firestore Security Rules
+- Never commit `.env` files
+- Report vulnerabilities to anthony15s.email@gmail.com
+
 ## License
 
-This project is licensed under the MIT License - see the <LICENSE> file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Author
 
@@ -371,6 +380,7 @@ This project is licensed under the MIT License - see the <LICENSE> file for deta
 - University: Miami University Regionals
 - Course: CIT 457 (Fall 2025) / CIT 458 (Spring 2026)
 - GitHub: [@RodActual](https://github.com/RodActual)
+- Email: anthony15s.email@gmail.com
 
 ## Acknowledgments
 
@@ -388,12 +398,6 @@ For issues, questions, or feature requests:
 - Open an issue on [GitHub Issues](https://github.com/RodActual/FortisBudget/issues)
 - Email: anthony15s.email@gmail.com
 
-## Related Documentation
-
-- [Firebase Documentation](https://firebase.google.com/docs)
-- [React Documentation](https://react.dev)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-
------
+---
 
 **Built for students who want to take control of their finances without breaking the bank.**
