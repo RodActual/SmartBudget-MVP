@@ -1,7 +1,7 @@
 # render.yaml
 services:
   - type: web
-    name: SmartBudget-MVP
+    name: FortisBudget
     env: python
     region: oregon
     plan: free
