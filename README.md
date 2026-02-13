@@ -145,82 +145,45 @@ FortisBudget/
 - Firebase account (free tier)
 - Vercel account (optional, for deployment)
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm/yarn
+- Firebase account (free tier)
+- Vercel account (optional, for deployment)
+
 ### Installation
 
-1. **Clone the repository**
+**For complete setup instructions, see [ENVIRONMENT_SETUP.md](./ENVIRONMENT_SETUP.md)**
 
+Quick start:
+
+1. Clone and install dependencies
 ```bash
-git clone https://github.com/yourusername/FortisBudget.git
-cd FortisBudget/frontend
+   git clone https://github.com/RodActual/FortisBudget.git
+   cd FortisBudget/frontend
+   npm install
 ```
 
-2. **Install dependencies**
-
+2. Set up environment variables
 ```bash
-npm install
+   cp .env.example .env
+   # Edit .env with your Firebase credentials
 ```
 
-3. **Set up Firebase**
+3. Configure Firebase (see ENVIRONMENT_SETUP.md for details)
+   - Create Firebase project
+   - Enable Authentication (Email/Password)
+   - Enable Firestore Database
+   - Deploy Security Rules
 
-- Create a new Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-- Enable **Authentication** (Email/Password provider)
-- Enable **Firestore Database** (production mode)
-- Copy your Firebase config
-
-4. **Configure environment variables**
-
-Create a `.env` file in the `frontend/` directory:
-
-```env
-VITE_FIREBASE_API_KEY=your_api_key_here
-VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-```
-
-5. **Set up Firestore security rules**
-
-In Firebase Console → Firestore Database → Rules, paste:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // User settings
-    match /userSettings/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Transactions - user can only access their own
-    match /transactions/{transactionId} {
-      allow read, write: if request.auth != null && 
-                           resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && 
-                       request.resource.data.userId == request.auth.uid;
-    }
-    
-    // Budgets - user can only access their own
-    match /budgets/{budgetId} {
-      allow read, write: if request.auth != null && 
-                           resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && 
-                       request.resource.data.userId == request.auth.uid;
-    }
-  }
-}
-```
-
-6. **Run development server**
-
+4. Run development server
 ```bash
-npm run dev
+   npm run dev
 ```
 
-Visit `http://localhost:5173` to see the app running locally.
-
+For security best practices, see [SECURITY.md](./SECURITY.md)
 ### Building for Production
 
 ```bash
@@ -411,7 +374,7 @@ This project is licensed under the MIT License - see the <LICENSE> file for deta
 
 - University: Miami University Regionals
 - Course: CIT 457 (Fall 2025) / CIT 458 (Spring 2026)
-- GitHub: [@Anthony-Rodriguez](https://github.com/Anthony-Rodriguez)
+- GitHub: [@RodActual](https://github.com/RodActual)
 
 ## Acknowledgments
 
@@ -431,7 +394,6 @@ For issues, questions, or feature requests:
 
 ## Related Documentation
 
-- [Project Book](https://docs.google.com/document/d/your-doc-id) - Complete project documentation
 - [Firebase Documentation](https://firebase.google.com/docs)
 - [React Documentation](https://react.dev)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)

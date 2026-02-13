@@ -48,13 +48,13 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
 
     try {
       await sendEmailVerification(user, {
-        url: window.location.origin, // Redirect URL after verification
+        url: window.location.origin,
         handleCodeInApp: false,
       });
 
       setEmailSent(true);
       setSuccess("Verification email sent! Please check your inbox.");
-      setCooldown(60); // 60 second cooldown before resend
+      setCooldown(60);
     } catch (err: any) {
       console.error("Error sending verification email:", err);
       
@@ -77,7 +77,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     setSuccess("");
 
     try {
-      // Reload user to get latest email verification status
       await reload(user);
       
       if (user.emailVerified) {

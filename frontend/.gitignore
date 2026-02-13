@@ -1,27 +1,94 @@
-# Logs
-logs
-*.log
+# ---- Python / Flask ----
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+env/
+venv/
+ENV/
+.venv/
+.Python
+
+# Flask instance folder
+instance/
+
+# Pytest cache
+.pytest_cache/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Coverage reports
+htmlcov/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Local development settings
+config/*.env
+*.env
+
+# ---- Node.js / React ----
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Production build
+build/
+dist/
+.out/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# ⚠️ CRITICAL: Environment variables with sensitive data
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Editor / OS files
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# ---- Firebase ----
+# Firebase cache and config
+.firebase/
+.firebaserc
+frontend/serviceAccountKey.json
+
+# ⚠️ CRITICAL: Never commit service account keys
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+
+# ---- IDE / Tooling ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
 
 *storybook.log
 storybook-static
+
+# ---- Security ----
+# Additional security patterns
+*.pem
+*.key
+*.cert
+.env*.local
+secrets/
+credentials/

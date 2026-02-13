@@ -45,10 +45,14 @@ build/
 dist/
 .out/
 
-# Local environment variables
+# ⚠️ CRITICAL: Environment variables with sensitive data
+.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
 
 # Logs
@@ -65,6 +69,10 @@ Thumbs.db
 .firebaserc
 frontend/serviceAccountKey.json
 
+# ⚠️ CRITICAL: Never commit service account keys
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+
 # ---- IDE / Tooling ----
 .vscode/
 .idea/
@@ -75,3 +83,12 @@ frontend/serviceAccountKey.json
 
 *storybook.log
 storybook-static
+
+# ---- Security ----
+# Additional security patterns
+*.pem
+*.key
+*.cert
+.env*.local
+secrets/
+credentials/
