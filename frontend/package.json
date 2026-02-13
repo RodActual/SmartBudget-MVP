@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://RodActual.github.io/SmartBudget-MVP",
+  "homepage": "https://RodActual.github.io/FortisBudget",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
