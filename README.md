@@ -342,6 +342,7 @@ firebase deploy
 ## Contributing
 
 Contributions are welcome! This project is being developed as part of a university capstone project (CIT 457/458).
+[![Sponsor](https://img.shields.io/badge/Sponsor-FortisBudget-EA4AAA?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/RodActual)
 
 ### Development Guidelines
 
