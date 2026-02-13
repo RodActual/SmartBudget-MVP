@@ -230,7 +230,7 @@ export default function App() {
           <div className="flex items-center gap-4">
 <div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg">
   <FortisLogo className="h-8 w-8" />
-  <h1 className="text-xl font-bold tracking-tight text-white uppercase">
+  <h1 className="text-xl font-bold tracking-tight text-black uppercase">
     FortisBudget
   </h1>
 </div>
