@@ -1,12 +1,12 @@
-# SmartBudget - Personal Finance Dashboard
+# FortisBudget - Personal Finance Dashboard
 
 A modern, privacy-first budgeting application built for students and young professionals who want to learn financial discipline through mindful tracking.
 
 ## Overview
 
-SmartBudget is a completely free, full-featured budgeting tool that helps you track expenses, set budgets, and visualize spending patterns, without ads, subscriptions, or data monetization. Built with React and Firebase, it provides real-time synchronization and intelligent insights to help you make better financial decisions.
+FortisBudget is a completely free, full-featured budgeting tool that helps you track expenses, set budgets, and visualize spending patterns, without ads, subscriptions, or data monetization. Built with React and Firebase, it provides real-time synchronization and intelligent insights to help you make better financial decisions.
 
-**Live Demo:** <https://smartbudget-mvp.vercel.app>
+**Live Demo:** <https://fortisbudget.com>
 
 ## Key Features
 
@@ -92,7 +92,7 @@ SmartBudget is a completely free, full-featured budgeting tool that helps you tr
 ## Project Structure
 
 ```
-smartbudget/
+FortisBudget/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/          # React components
@@ -126,7 +126,7 @@ smartbudget/
 │   │   ├── globals.css          # Global styles and Tailwind config
 │   │   └── main.jsx             # Application entry point
 │   ├── public/
-│   │   └── smartbudget-logo.png
+│   │   └── FortisBudget-logo.png
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tsconfig.json
@@ -150,8 +150,8 @@ smartbudget/
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/smartbudget.git
-cd smartbudget/frontend
+git clone https://github.com/yourusername/FortisBudget.git
+cd FortisBudget/frontend
 ```
 
 2. **Install dependencies**
@@ -297,7 +297,7 @@ npm run preview  # Test production build locally
 
 ### Manual Entry as a Feature
 
-Unlike competitors that prioritize automatic bank synchronization, SmartBudget treats manual entry as a **learning tool**:
+Unlike competitors that prioritize automatic bank synchronization, FortisBudget treats manual entry as a **learning tool**:
 
 - Forces awareness of every transaction
 - Builds mindful spending habits
@@ -426,7 +426,7 @@ This project is licensed under the MIT License - see the <LICENSE> file for deta
 
 For issues, questions, or feature requests:
 
-- Open an issue on [GitHub Issues](https://github.com/RodActual/smartbudget/issues)
+- Open an issue on [GitHub Issues](https://github.com/RodActual/FortisBudget/issues)
 - Email: anthony15s.email@gmail.com
 
 ## Related Documentation
