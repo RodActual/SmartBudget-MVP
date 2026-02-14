@@ -28,21 +28,9 @@ interface ChartsInsightsProps {
   onUpdateBudgets: (budgets: Budget[]) => void;
 }
 
+// Simplified color resolver - budgets always store hex colors
 const resolveColor = (color: string) => {
-  if (!color) return "#cbd5e1";
-  if (color.startsWith("#")) return color;
-  if (color.startsWith("rgb")) return color;
-  
-  const colorMap: Record<string, string> = {
-    "bg-red-600": "#dc2626",
-    "bg-blue-600": "#2563eb",
-    "bg-green-600": "#16a34a",
-    "bg-yellow-600": "#ca8a04",
-    "bg-purple-600": "#9333ea",
-    "bg-pink-600": "#db2777",
-    "bg-indigo-600": "#4f46e5",
-  };
-  return colorMap[color] || "#64748b";
+  return color || "#cbd5e1";
 };
 
 type TimeRange = '3m' | '6m' | '1y' | 'all';

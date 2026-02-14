@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Save, Target, Lock, Trash2, AlertTriangle, Database, Sprout, ShieldCheck, Archive, RotateCcw } from "lucide-react";
+import { Save, Target, Lock, Trash2, AlertTriangle, ShieldCheck, Archive, RotateCcw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,9 +24,6 @@ import {
   TableRow,
 } from "../ui/table";
 import type { Budget, Transaction } from "../App";
-import { seedDatabase } from "../utils/seedDatabase";
-import { clearDatabase } from "../utils/clearDatabase";
-import { useIsAdmin } from "./AdminBadge";
 
 interface SettingsPageProps {
   budgets: Budget[];
@@ -59,8 +56,6 @@ export function SettingsPage({
   onOpenPrivacy,
   onOpenTerms,
 }: SettingsPageProps) {
-  const { isAdmin } = useIsAdmin();
-
   // Local state
   const [tempUserName, setTempUserName] = useState(userName);
   const [tempSavingsGoal, setTempSavingsGoal] = useState(savingsGoal.toString());
@@ -73,9 +68,6 @@ export function SettingsPage({
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-
-  const [isDataLoading, setIsDataLoading] = useState(false);
-  const [dataMessage, setDataMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
@@ -127,40 +119,6 @@ export function SettingsPage({
       setTimeout(() => setPasswordSuccess(""), 3000);
     } else {
       setPasswordError(result.error || "Failed to update password");
-    }
-  };
-
-  const handleSeed = async (scenario: 'healthy' | 'crisis') => {
-    if (!userId) return;
-    const confirmMsg = scenario === 'crisis' 
-      ? "⚠️ Load CRISIS Mode? This will create overspending alerts."
-      : "🌱 Load HEALTHY Mode? This will create balanced expenses.";
-
-    if (window.confirm(confirmMsg)) {
-      setIsDataLoading(true);
-      try {
-        await seedDatabase(userId, scenario);
-        setDataMessage({ type: 'success', text: "Data seeded! Reloading..." });
-        setTimeout(() => window.location.reload(), 1000);
-      } catch (error) {
-        setDataMessage({ type: 'error', text: "Failed to seed data." });
-        setIsDataLoading(false);
-      }
-    }
-  };
-
-  const handleClearData = async () => {
-    if (!userId) return;
-    if (window.confirm("⚠️ Are you sure? This will DELETE ALL transactions permanently.")) {
-      setIsDataLoading(true);
-      try {
-        await clearDatabase(userId);
-        setDataMessage({ type: 'success', text: "All data cleared successfully." });
-        setTimeout(() => window.location.reload(), 1000);
-      } catch (error) {
-        setDataMessage({ type: 'error', text: "Failed to clear data." });
-        setIsDataLoading(false);
-      }
     }
   };
 
@@ -385,31 +343,6 @@ export function SettingsPage({
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Admin Section */}
-      {isAdmin && (
-        <Card className="border-blue-100 bg-slate-50/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800"><Database className="h-5 w-5 text-blue-600" /> Admin Tools</CardTitle>
-            <CardDescription>Database seeding and reset utilities for demos</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2 mb-2 font-medium text-emerald-700"><Sprout className="h-4 w-4" /> Healthy Seed</div>
-                <Button variant="outline" size="sm" onClick={() => handleSeed('healthy')} disabled={isDataLoading} className="w-full">Load Healthy</Button>
-              </div>
-              <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2 mb-2 font-medium text-orange-700"><AlertTriangle className="h-4 w-4" /> Crisis Seed</div>
-                <Button variant="outline" size="sm" onClick={() => handleSeed('crisis')} disabled={isDataLoading} className="w-full">Load Crisis</Button>
-              </div>
-            </div>
-            <Button variant="ghost" onClick={handleClearData} disabled={isDataLoading} className="w-full text-red-600 hover:bg-red-50">
-              <Trash2 className="mr-2 h-4 w-4" /> Clear All Transactions & Budgets
-            </Button>
           </CardContent>
         </Card>
       )}
