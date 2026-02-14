@@ -13,4 +13,3 @@ export { PrivacyPolicy } from "./PrivacyPolicy";
 export { TermsOfService } from "./TermsOfService";
 export { WelcomeSetup } from "./WelcomeSetup";
 export { EmailVerification } from "./EmailVerification";
-export { AdminBadge } from "./AdminBadge";
