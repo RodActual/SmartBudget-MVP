@@ -2,7 +2,7 @@ import "./globals.css";
 import { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
-import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } from "firebase/firestore"; 
+import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, updateDoc, deleteDoc } from "firebase/firestore"; 
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 // Components
@@ -190,7 +190,36 @@ export default function App() {
     }
   };
 
-  // --- 7. RENDERING ---
+  // --- 7. ARCHIVE HANDLERS (Issue #5) ---
+  const handleUpdateTransactionForArchive = async (id: string, updates: Partial<Transaction>) => {
+    if (!user) return;
+    
+    try {
+      const transactionRef = doc(db, 'transactions', id);
+      await updateDoc(transactionRef, updates);
+      
+      // The useFinancialData hook will automatically refresh the data
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteTransactionPermanently = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const transactionRef = doc(db, 'transactions', id);
+      await deleteDoc(transactionRef);
+      
+      // The useFinancialData hook will automatically refresh the data
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+  };
+
+  // --- 8. RENDERING ---
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-xl">Loading...</div>;
 
   // Global Legal Overlays (Priority Rendering)
@@ -299,6 +328,8 @@ export default function App() {
                     userName={userName} onUpdateUserName={setUserName} 
                     savingsGoal={savingsGoal} onUpdateSavingsGoal={setSavingsGoal}
                     onUpdatePassword={handleUpdatePassword} onDeleteAccount={handleDeleteAccount}
+                    onUpdateTransaction={handleUpdateTransactionForArchive}
+                    onDeleteTransaction={handleDeleteTransactionPermanently}
                     onOpenPrivacy={() => setAuthMode('privacy')}
                     onOpenTerms={() => setAuthMode('terms')}
                   />

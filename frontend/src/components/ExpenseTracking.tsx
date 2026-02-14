@@ -78,11 +78,20 @@ export function ExpenseTracking({
   const handleArchiveClick = async () => {
     if (oldTransactions.length === 0) return;
     
-    if (window.confirm(`Archive ${oldTransactions.length} transactions older than 90 days? They will be hidden from this list but remain in your charts.`)) {
+    // Improved confirmation message with clear explanation
+    const message = `Archive ${oldTransactions.length} transaction${oldTransactions.length === 1 ? '' : 's'} older than 90 days?
+
+✓ Hidden from your main transaction list
+✓ Still counted in charts and analytics  
+✓ Accessible in Settings → Archived Transactions
+
+You can restore or permanently delete them later.`;
+
+    if (window.confirm(message)) {
         try {
           // Use the updated handler to archive each transaction
           await Promise.all(oldTransactions.map(t => onUpdateTransaction(t.id, { archived: true })));
-          alert(`Successfully archived ${oldTransactions.length} transactions.`);
+          alert(`Successfully archived ${oldTransactions.length} transaction${oldTransactions.length === 1 ? '' : 's'}.`);
         } catch (error) {
           console.error("Archive failed:", error);
           alert("An error occurred while archiving.");
