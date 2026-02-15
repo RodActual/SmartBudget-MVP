@@ -19,7 +19,9 @@ import {
   PrivacyPolicy, 
   TermsOfService, 
   WelcomeSetup, 
-  EmailVerification
+  EmailVerification,
+  ErrorBoundary,
+  GlobalErrorBoundary
 } from "./components";
 
 import { FortisLogo } from "./components/FortisLogo";
@@ -196,10 +198,9 @@ export default function App() {
     try {
       const transactionRef = doc(db, 'transactions', id);
       await updateDoc(transactionRef, updates);
-      
-      // The useFinancialData hook will automatically refresh the data
     } catch (error) {
       console.error('Error updating transaction:', error);
+      alert('Failed to update transaction. Please try again.');
       throw error;
     }
   };
@@ -210,10 +211,9 @@ export default function App() {
     try {
       const transactionRef = doc(db, 'transactions', id);
       await deleteDoc(transactionRef);
-      
-      // The useFinancialData hook will automatically refresh the data
     } catch (error) {
       console.error('Error deleting transaction:', error);
+      alert('Failed to delete transaction. Please try again.');
       throw error;
     }
   };
@@ -250,121 +250,135 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white relative">
-      <div className="container mx-auto p-4 sm:p-6 space-y-6">
-        
-        {/* Fortis Header */}
-        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl shadow-sm p-4 overflow-hidden">
-          <div className="flex items-center gap-4">
-<div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg">
-  <FortisLogo className="h-8 w-8" />
-  <h1 className="text-xl font-bold tracking-tight text-black uppercase">
-    FortisBudget
-  </h1>
-</div>
-            <p className="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-              Financial Strength Through Intentionality
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500 font-medium hidden sm:inline">{user?.email}</span>
-            <AlertsNotificationBell 
-              budgets={currentBudgets} transactions={transactions} 
-              alertSettings={alertSettings} onUpdateAlertSettings={setAlertSettings} 
-            />
-            <Button onClick={handleLogout} variant="destructive" size="sm" className="shadow-sm">
-              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Logout</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Verification Banner */}
-        {showVerificationBanner && (
-          <EmailVerification onVerified={async () => { setShowVerificationBanner(false); window.location.reload(); }} />
-        )}
-
-        {/* Main Content Gate */}
-        {user?.emailVerified ? (
-          !isSetupComplete ? (
-             <WelcomeSetup userId={user.uid} onComplete={(name, goal) => { setUserName(name); setSavingsGoal(goal); setIsSetupComplete(true); }} />
-          ) : (
-            <>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-5 bg-slate-100 h-auto sm:h-10 p-1 border border-slate-200">
-                  <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4"/><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
-                  <TabsTrigger value="expenses" className="gap-2"><Receipt className="h-4 w-4"/><span className="hidden sm:inline">Expenses</span></TabsTrigger>
-                  <TabsTrigger value="insights" className="gap-2"><BarChart3 className="h-4 w-4"/><span className="hidden sm:inline">Insights</span></TabsTrigger>
-                  <TabsTrigger value="learn" className="gap-2"><BookOpen className="h-4 w-4"/><span className="hidden sm:inline">Learn</span></TabsTrigger>
-                  <TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4"/><span className="hidden sm:inline">Settings</span></TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="dashboard" className="mt-6">
-                 <DashboardOverview 
-                  budgets={currentBudgets} 
-                  transactions={transactions} 
-                  onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
-                 />
-                </TabsContent>
-                
-                <TabsContent value="expenses" className="mt-6">
-                  <ExpenseTracking 
-                    transactions={transactions} 
-                    budgets={budgets} 
-                    onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
-                    onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
-                    onDelete={deleteTransaction} 
-                    onUpdateTransaction={updateTransaction} 
-                  />
-                </TabsContent>
-                
-                <TabsContent value="insights" className="mt-6">
-                  <ChartsInsights budgets={currentBudgets} transactions={transactions} onUpdateBudgets={updateBudgets} />
-                </TabsContent>
-                
-                <TabsContent value="learn" className="mt-6"><LiteraturePage /></TabsContent>
-                
-                <TabsContent value="settings" className="mt-6">
-                  <SettingsPage 
-  budgets={budgets} 
-  transactions={transactions}
-  onUpdateTransaction={handleUpdateTransactionForArchive}
-  onDeleteTransaction={handleDeleteTransactionPermanently}
-  onNavigate={setAuthMode}
-/>
-                </TabsContent>
-              </Tabs>
-
-              {/* Internal Legal Footer */}
-              <div className="flex justify-center gap-6 mt-8 pb-8 text-[10px] text-slate-400 uppercase tracking-widest">
-                <button onClick={() => setAuthMode('privacy')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
-                <button onClick={() => setAuthMode('terms')} className="hover:text-blue-600 transition-colors">Terms of Service</button>
-                <span>&copy; 2026 FortisBudget</span>
+    <GlobalErrorBoundary>
+      <div className="min-h-screen bg-white relative">
+        <div className="container mx-auto p-4 sm:p-6 space-y-6">
+          
+          {/* Fortis Header */}
+          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl shadow-sm p-4 overflow-hidden">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg">
+                <FortisLogo className="h-8 w-8" />
+                <h1 className="text-xl font-bold tracking-tight text-black uppercase">
+                  FortisBudget
+                </h1>
               </div>
+              <p className="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+                Financial Strength Through Intentionality
+              </p>
+            </div>
 
-              <AddTransactionDialog 
-                open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if(!open) setEditingTransaction(null); }}
-                onAddTransaction={(t) => { addTransaction(t); setDialogOpen(false); }}
-                onEditTransaction={(t) => { if(editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
-                editingTransaction={editingTransaction}
-                budgets={budgets}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500 font-medium hidden sm:inline">{user?.email}</span>
+              <AlertsNotificationBell 
+                budgets={currentBudgets} transactions={transactions} 
+                alertSettings={alertSettings} onUpdateAlertSettings={setAlertSettings} 
               />
-            </>
-          )
-        ) : (
-          <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-xl mt-6 bg-slate-50">
-            <h2 className="text-2xl font-bold text-slate-800">Email Verification Required</h2>
-            <p className="text-slate-500 mt-2 max-w-sm mx-auto">To protect your financial data, please verify your email address using the banner at the top of the page.</p>
+              <Button onClick={handleLogout} variant="destructive" size="sm" className="shadow-sm">
+                <LogOut className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Logout</span>
+              </Button>
+            </div>
           </div>
-        )}
 
-        <AlertDialog open={showWarning} onOpenChange={() => {}}>
-          <AlertDialogContent>
-            <AlertDialogHeader><AlertDialogTitle>Are you still there?</AlertDialogTitle><AlertDialogDescription>You'll be logged out in 2 minutes.</AlertDialogDescription></AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogAction onClick={continueSession}>Continue</AlertDialogAction></AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          {/* Verification Banner */}
+          {showVerificationBanner && (
+            <EmailVerification onVerified={async () => { setShowVerificationBanner(false); window.location.reload(); }} />
+          )}
+
+          {/* Main Content Gate */}
+          {user?.emailVerified ? (
+            !isSetupComplete ? (
+               <WelcomeSetup userId={user.uid} onComplete={(name, goal) => { setUserName(name); setSavingsGoal(goal); setIsSetupComplete(true); }} />
+            ) : (
+              <>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-5 bg-slate-100 h-auto sm:h-10 p-1 border border-slate-200">
+                    <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4"/><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
+                    <TabsTrigger value="expenses" className="gap-2"><Receipt className="h-4 w-4"/><span className="hidden sm:inline">Expenses</span></TabsTrigger>
+                    <TabsTrigger value="insights" className="gap-2"><BarChart3 className="h-4 w-4"/><span className="hidden sm:inline">Insights</span></TabsTrigger>
+                    <TabsTrigger value="learn" className="gap-2"><BookOpen className="h-4 w-4"/><span className="hidden sm:inline">Learn</span></TabsTrigger>
+                    <TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4"/><span className="hidden sm:inline">Settings</span></TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="dashboard" className="mt-6">
+                    <ErrorBoundary name="Dashboard">
+                      <DashboardOverview 
+                        budgets={currentBudgets} 
+                        transactions={transactions} 
+                        onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
+                      />
+                    </ErrorBoundary>
+                  </TabsContent>
+                  
+                  <TabsContent value="expenses" className="mt-6">
+                    <ErrorBoundary name="Expense Tracking">
+                      <ExpenseTracking 
+                        transactions={transactions} 
+                        budgets={budgets} 
+                        onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
+                        onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
+                        onDelete={deleteTransaction} 
+                        onUpdateTransaction={updateTransaction} 
+                      />
+                    </ErrorBoundary>
+                  </TabsContent>
+                  
+                  <TabsContent value="insights" className="mt-6">
+                    <ErrorBoundary name="Charts & Insights">
+                      <ChartsInsights budgets={currentBudgets} transactions={transactions} onUpdateBudgets={updateBudgets} />
+                    </ErrorBoundary>
+                  </TabsContent>
+                  
+                  <TabsContent value="learn" className="mt-6">
+                    <ErrorBoundary name="Learn">
+                      <LiteraturePage />
+                    </ErrorBoundary>
+                  </TabsContent>
+                  
+                  <TabsContent value="settings" className="mt-6">
+                    <ErrorBoundary name="Settings">
+                      <SettingsPage 
+                        budgets={budgets} 
+                        transactions={transactions}
+                        onUpdateTransaction={handleUpdateTransactionForArchive}
+                        onDeleteTransaction={handleDeleteTransactionPermanently}
+                        onNavigate={setAuthMode}
+                      />
+                    </ErrorBoundary>
+                  </TabsContent>
+                </Tabs>
+
+                {/* Internal Legal Footer */}
+                <div className="flex justify-center gap-6 mt-8 pb-8 text-[10px] text-slate-400 uppercase tracking-widest">
+                  <button onClick={() => setAuthMode('privacy')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
+                  <button onClick={() => setAuthMode('terms')} className="hover:text-blue-600 transition-colors">Terms of Service</button>
+                  <span>&copy; 2026 FortisBudget</span>
+                </div>
+
+                <AddTransactionDialog 
+                  open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if(!open) setEditingTransaction(null); }}
+                  onAddTransaction={(t) => { addTransaction(t); setDialogOpen(false); }}
+                  onEditTransaction={(t) => { if(editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
+                  editingTransaction={editingTransaction}
+                  budgets={budgets}
+                />
+              </>
+            )
+          ) : (
+            <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-xl mt-6 bg-slate-50">
+              <h2 className="text-2xl font-bold text-slate-800">Email Verification Required</h2>
+              <p className="text-slate-500 mt-2 max-w-sm mx-auto">To protect your financial data, please verify your email address using the banner at the top of the page.</p>
+            </div>
+          )}
+
+          <AlertDialog open={showWarning} onOpenChange={() => {}}>
+            <AlertDialogContent>
+              <AlertDialogHeader><AlertDialogTitle>Are you still there?</AlertDialogTitle><AlertDialogDescription>You'll be logged out in 2 minutes.</AlertDialogDescription></AlertDialogHeader>
+              <AlertDialogFooter><AlertDialogAction onClick={continueSession}>Continue</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
-    </div>
+    </GlobalErrorBoundary>
   );
 }
