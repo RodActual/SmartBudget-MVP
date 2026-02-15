@@ -5,12 +5,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "../ui/table";
 import type { Transaction, Budget } from "../App";
-
-const getTodayStart = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-};
+import { getTodayStart, getStartOfDay, getDaysAgo, isDateBefore } from "../utils/dateUtils";
 
 interface ExpenseTrackingProps {
   transactions: Transaction[];
@@ -18,7 +13,6 @@ interface ExpenseTrackingProps {
   onOpenAddTransaction: () => void;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
-  // Updated to match the prop passed from App.tsx
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
 }
 
@@ -34,25 +28,21 @@ export function ExpenseTracking({
 
   const { visibleTransactions, oldTransactions, dateRange } = useMemo(() => {
       const todayStart = getTodayStart();
-      const ninetyDaysAgo = new Date(todayStart);
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const ninetyDaysAgo = getDaysAgo(90);
       
       // 1. Logic: Identify Old Candidates (Older than 90 days & Not Archived)
       const old = transactions.filter(t => {
         if (t.archived) return false;
-        const tDate = new Date(t.date);
-        tDate.setHours(0,0,0,0);
-        return tDate < ninetyDaysAgo;
+        const tDate = getStartOfDay(t.date);
+        return isDateBefore(tDate, ninetyDaysAgo);
       });
 
       // 2. Logic: Filter Visible (Last 90 days OR Newer & Not Archived)
       const visible = transactions.filter(t => {
         if (t.archived) return false;
         
-        const tDate = new Date(t.date);
-        tDate.setHours(0,0,0,0);
-        
-        const isRecent = tDate >= ninetyDaysAgo;
+        const tDate = getStartOfDay(t.date);
+        const isRecent = !isDateBefore(tDate, ninetyDaysAgo);
         if (!isRecent) return false;
 
         const searchLower = searchTerm.toLowerCase();

@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import type { Transaction, Budget } from "../App";
+import { parseDateInput, formatDateForInput } from "../utils/dateUtils";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -25,7 +26,7 @@ interface AddTransactionDialogProps {
   onAddTransaction: (transaction: Omit<Transaction, "id">) => void;
   onEditTransaction: (transaction: Omit<Transaction, "id">) => void;
   editingTransaction: Transaction | null;
-  budgets: Budget[]; // <--- NEW: Accept budgets to show dynamic categories
+  budgets: Budget[];
 }
 
 export function AddTransactionDialog({
@@ -40,7 +41,7 @@ export function AddTransactionDialog({
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(formatDateForInput(new Date())); // ✅ FIXED: Use date utility
 
   // Reset or populate form
   useEffect(() => {
@@ -49,13 +50,13 @@ export function AddTransactionDialog({
       setAmount(editingTransaction.amount.toString());
       setCategory(editingTransaction.category);
       setType(editingTransaction.type);
-      setDate(editingTransaction.date);
+      setDate(formatDateForInput(editingTransaction.date)); // ✅ FIXED: Use date utility
     } else {
       setDescription("");
       setAmount("");
       setCategory("");
       setType("expense");
-      setDate(new Date().toISOString().split("T")[0]);
+      setDate(formatDateForInput(new Date()));
     }
   }, [editingTransaction, open]);
 
@@ -65,7 +66,7 @@ export function AddTransactionDialog({
     if (!description || !amount || !category) return;
 
     const transactionData = {
-      date,
+      date: parseDateInput(date),
       description,
       category,
       amount: parseFloat(amount),
@@ -78,8 +79,6 @@ export function AddTransactionDialog({
       onAddTransaction(transactionData);
     }
 
-    // Reset form logic is handled by the useEffect on open/close, 
-    // but we can clear specific fields here if needed.
     if (!editingTransaction) {
         setDescription("");
         setAmount("");
@@ -87,8 +86,8 @@ export function AddTransactionDialog({
     }
   };
 
-  // LOGIC FIX: Generate categories dynamically from Budgets
-  // We uses a Set to ensure "Income" and "Other" are always present but unique
+  // Generate categories dynamically from Budgets
+  // Uses a Set to ensure "Income" and "Other" are always present but unique
   const uniqueCategories = Array.from(new Set([
     ...budgets.map(b => b.category),
     "Income",

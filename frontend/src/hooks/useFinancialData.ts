@@ -6,6 +6,7 @@ import {
   orderBy, limit, writeBatch 
 } from "firebase/firestore";
 import type { Transaction, Budget } from "../App";
+import { isCurrentMonth } from "../utils/dateUtils"; // ✅ NEW: Import date utility
 
 export function useFinancialData(user: any) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -47,24 +48,18 @@ export function useFinancialData(user: any) {
     };
   }, [user]);
 
-  // 2. Calculated State (Memoized)
+  // 2. Calculated State (Memoized) - ✅ FIXED: Use date utility for month check
   const currentBudgets = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
     return budgets.map((budget) => {
       // Calculate spent for this specific budget category in the current month
       const spent = transactions
         .filter((t) => {
-          const tDate = new Date(t.date);
           return (
             t.category === budget.category &&
             t.type === "expense" &&
             t.date && 
             !t.archived && // Respect soft delete
-            tDate.getMonth() === currentMonth &&
-            tDate.getFullYear() === currentYear
+            isCurrentMonth(t.date) // ✅ FIXED: Simple, reliable month check
           );
         })
         .reduce((sum, t) => sum + t.amount, 0);

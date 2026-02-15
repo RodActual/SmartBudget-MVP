@@ -37,7 +37,7 @@ import { useInactivity } from "./hooks/useInactivity";
 // Types
 export interface Transaction {
   id: string;
-  date: string;
+  date: number;
   description: string;
   category: string;
   amount: number;
@@ -300,7 +300,11 @@ export default function App() {
                 </TabsList>
 
                 <TabsContent value="dashboard" className="mt-6">
-                  <DashboardOverview budgets={currentBudgets} transactions={transactions} onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} userName={userName} savingsGoal={savingsGoal} />
+                 <DashboardOverview 
+                  budgets={currentBudgets} 
+                  transactions={transactions} 
+                  onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
+                 />
                 </TabsContent>
                 
                 <TabsContent value="expenses" className="mt-6">
@@ -322,15 +326,12 @@ export default function App() {
                 
                 <TabsContent value="settings" className="mt-6">
                   <SettingsPage 
-                    budgets={budgets} transactions={transactions} userId={user.uid}
-                    userName={userName} onUpdateUserName={setUserName} 
-                    savingsGoal={savingsGoal} onUpdateSavingsGoal={setSavingsGoal}
-                    onUpdatePassword={handleUpdatePassword} onDeleteAccount={handleDeleteAccount}
-                    onUpdateTransaction={handleUpdateTransactionForArchive}
-                    onDeleteTransaction={handleDeleteTransactionPermanently}
-                    onOpenPrivacy={() => setAuthMode('privacy')}
-                    onOpenTerms={() => setAuthMode('terms')}
-                  />
+  budgets={budgets} 
+  transactions={transactions}
+  onUpdateTransaction={handleUpdateTransactionForArchive}
+  onDeleteTransaction={handleDeleteTransactionPermanently}
+  onNavigate={setAuthMode}
+/>
                 </TabsContent>
               </Tabs>
 
