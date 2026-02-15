@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -24,44 +24,37 @@ import {
   TableRow,
 } from "../ui/table";
 import type { Budget, Transaction } from "../App";
+import { useUserSettings } from "../hooks/useUserSettings";
+import { auth, db } from "../firebase";
+import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import { collection, query, where, getDocs, writeBatch, doc } from "firebase/firestore";
 
 interface SettingsPageProps {
   budgets: Budget[];
   transactions: Transaction[];
-  userId: string;
-  userName: string;
-  onUpdateUserName: (name: string) => void;
-  savingsGoal: number;
-  onUpdateSavingsGoal: (goal: number) => void;
-  onUpdatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
-  onDeleteAccount: (password: string) => Promise<{ success: boolean; error?: string }>;
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
-  onOpenPrivacy: () => void;
-  onOpenTerms: () => void;
+  onNavigate: (mode: 'privacy' | 'terms') => void;
 }
 
 export function SettingsPage({
   budgets,
   transactions,
-  userId,
-  userName,
-  onUpdateUserName,
-  savingsGoal,
-  onUpdateSavingsGoal,
-  onUpdatePassword,
-  onDeleteAccount,
   onUpdateTransaction,
   onDeleteTransaction,
-  onOpenPrivacy,
-  onOpenTerms,
+  onNavigate,
 }: SettingsPageProps) {
-  // Local state
+  
+  // Use custom hook for user settings
+  const { userName, savingsGoal, updateUserName, updateSavingsGoal } = useUserSettings();
+  
+  // Local state for form inputs
   const [tempUserName, setTempUserName] = useState(userName);
   const [tempSavingsGoal, setTempSavingsGoal] = useState(savingsGoal.toString());
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // Password state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -69,67 +62,127 @@ export function SettingsPage({
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Delete account state
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
 
-  // Archived transactions state
+  // Archived transactions
   const archivedTransactions = useMemo(() => {
     return transactions.filter(t => t.archived === true);
   }, [transactions]);
 
+  // Sync temp values when hook values change
+  useState(() => {
+    setTempUserName(userName);
+    setTempSavingsGoal(savingsGoal.toString());
+  });
+
+  // Save settings handler
   const handleSave = async () => {
     setSaveMessage(null);
     setIsSaving(true);
     try {
-        if (tempUserName.trim()) onUpdateUserName(tempUserName.trim());
-        const goalValue = parseFloat(tempSavingsGoal);
-        if (!isNaN(goalValue) && goalValue >= 0) onUpdateSavingsGoal(goalValue);
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-        setSaveMessage({ type: 'success', text: "Settings saved successfully! ✅" });
+      if (tempUserName.trim()) updateUserName(tempUserName.trim());
+      const goalValue = parseFloat(tempSavingsGoal);
+      if (!isNaN(goalValue) && goalValue >= 0) updateSavingsGoal(goalValue);
+      await new Promise(resolve => setTimeout(resolve, 500)); 
+      setSaveMessage({ type: 'success', text: "Settings saved successfully! ✅" });
     } catch (e) {
-        setSaveMessage({ type: 'error', text: "Failed to save settings." });
+      setSaveMessage({ type: 'error', text: "Failed to save settings." });
     } finally {
-        setIsSaving(false);
-        setTimeout(() => setSaveMessage(null), 3000);
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage(null), 3000);
     }
   };
 
+  // Password update handler (moved from App.tsx)
   const handleUpdatePassword = async () => {
     setPasswordError("");
     setPasswordSuccess("");
+    
+    const user = auth.currentUser;
+    if (!user) {
+      setPasswordError("No user logged in");
+      return;
+    }
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       setPasswordError("Please fill in all password fields");
       return;
     }
+    
     if (newPassword.length < 6) {
       setPasswordError("New password must be at least 6 characters");
       return;
     }
+    
     if (newPassword !== confirmPassword) {
       setPasswordError("New passwords do not match");
       return;
     }
-    setIsUpdatingPassword(true);
-    const result = await onUpdatePassword(currentPassword, newPassword);
-    setIsUpdatingPassword(false);
 
-    if (result.success) {
+    setIsUpdatingPassword(true);
+    
+    try {
+      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      
       setPasswordSuccess("Password updated successfully!");
-      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
       setTimeout(() => setPasswordSuccess(""), 3000);
-    } else {
-      setPasswordError(result.error || "Failed to update password");
+    } catch (error: any) {
+      setPasswordError(error.message || "Failed to update password");
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
+  // Delete account handler (moved from App.tsx)
   const handleDeleteAccount = async () => {
     setDeleteError("");
+    
+    const user = auth.currentUser;
+    if (!user) {
+      setDeleteError("No user logged in");
+      return;
+    }
+
     if (!deletePassword) {
       setDeleteError("Please enter your password to confirm");
       return;
     }
-    const result = await onDeleteAccount(deletePassword);
-    if (!result.success) setDeleteError(result.error || "Failed to delete account");
+
+    try {
+      // Reauthenticate
+      const credential = EmailAuthProvider.credential(user.email!, deletePassword);
+      await reauthenticateWithCredential(user, credential);
+      
+      const uid = user.uid;
+      
+      // Delete all user data
+      const batch = writeBatch(db);
+      
+      const transactionsSnap = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
+      transactionsSnap.docs.forEach(d => batch.delete(d.ref));
+      
+      const budgetsSnap = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
+      budgetsSnap.docs.forEach(d => batch.delete(d.ref));
+      
+      batch.delete(doc(db, "userSettings", uid));
+      
+      await batch.commit();
+      
+      // Delete the user account
+      await deleteUser(user);
+      
+      // Success - user will be logged out automatically
+    } catch (error: any) {
+      console.error("Delete Account Error:", error);
+      setDeleteError(error.message || "Failed to delete account");
+    }
   };
 
   // Archived transaction handlers
@@ -168,7 +221,6 @@ export function SettingsPage({
 
   const handleDeleteAllPermanently = async () => {
     if (window.confirm(`⚠️ PERMANENTLY DELETE all ${archivedTransactions.length} archived transactions?\n\nThis action CANNOT be undone!`)) {
-      // Double confirmation for destructive action
       if (window.confirm("Are you absolutely sure? Type 'DELETE' to confirm.") === false) {
         return;
       }
@@ -355,8 +407,8 @@ export function SettingsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button variant="outline" size="sm" onClick={onOpenPrivacy} className="flex-1 border-slate-200 text-slate-600">View Privacy Policy</Button>
-            <Button variant="outline" size="sm" onClick={onOpenTerms} className="flex-1 border-slate-200 text-slate-600">View Terms of Service</Button>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('privacy')} className="flex-1 border-slate-200 text-slate-600">View Privacy Policy</Button>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('terms')} className="flex-1 border-slate-200 text-slate-600">View Terms of Service</Button>
           </div>
           <p className="text-[10px] text-slate-400 uppercase tracking-widest text-center">
             FortisBudget Prototype v1.0.0 | © 2026 FortisBudget

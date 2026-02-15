@@ -4,26 +4,21 @@ import { Button } from "../ui/button";
 import { Plus, TrendingDown, TrendingUp, Wallet, Target } from "lucide-react";
 import type { Budget, Transaction } from "../App";
 import { DailyTipCard } from "./DailyTipCard"; 
+import { useUserSettings } from "../hooks/useUserSettings";
 
 interface DashboardOverviewProps {
   budgets: Budget[];
   transactions: Transaction[];
   onOpenAddTransaction: () => void;
-  userName: string;
-  savingsGoal: number;
 }
 
 export function DashboardOverview({
   budgets,
   transactions,
   onOpenAddTransaction,
-  userName,
-  savingsGoal,
 }: DashboardOverviewProps) {
-  
-  // PERFORMANCE FIX: 
-  // Wrap expensive calculations in useMemo.
-  // This prevents recalculating the entire arrays on every single render cycle.
+  // Use custom hook for user settings
+  const { userName, savingsGoal } = useUserSettings();
   
   const financialTotals = useMemo(() => {
     const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
