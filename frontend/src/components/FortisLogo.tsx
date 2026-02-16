@@ -1,38 +1,69 @@
-export function FortisLogo({ className = "h-10 w-10" }: { className?: string }) {
+import React from "react";
+
+export function FortisLogo({ className = "h-12 w-auto" }: { className?: string }) {
   return (
     <svg 
-      viewBox="0 0 100 100" 
+      viewBox="0 0 300 100" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
       <defs>
-        {/* Subtle Inner Glow Filter */}
-        <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
+        {/* USACE Style Deep Red Gradient */}
+        <linearGradient id="castleRedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#8b1219" /> {/* Darker Castle Red */}
+          <stop offset="100%" stopColor="#630d12" /> {/* Shadow Red */}
+        </linearGradient>
+        
+        {/* Glow for the Shield */}
+        <filter id="shieldGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="blur" />
           <feOffset dx="0" dy="1" result="offsetBlur" />
-          <feComposite in="offsetBlur" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="shadow" />
-          <feColorMatrix in="shadow" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.3 0" />
+          <feColorMatrix in="offsetBlur" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.4 0" />
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
       </defs>
 
-      {/* Shield Base */}
-      <path 
-        d="M 50 5 L 90 15 V 45 C 90 75 50 95 50 95 C 50 95 10 75 10 45 V 15 L 50 5 Z" 
-        fill="#001D3D" 
-      />
+      {/* The Shield Icon */}
+      <g filter="url(#shieldGlow)">
+        <path 
+          d="M 40 10 L 75 18 V 45 C 75 70 40 88 40 88 C 40 88 5 70 5 45 V 18 L 40 10 Z" 
+          fill="url(#castleRedGrad)" 
+        />
+        {/* The 'F' inside the shield */}
+        <path 
+          d="M 32 28 H 54 V 36 H 40 V 44 H 50 V 52 H 40 V 68 H 32 V 28 Z" 
+          fill="white" 
+        />
+      </g>
 
-      {/* Overlay path that applies the glow effect */}
-      <path 
-        d="M 50 5 L 90 15 V 45 C 90 75 50 95 50 95 C 50 95 10 75 10 45 V 15 L 50 5 Z" 
-        filter="url(#innerGlow)" 
-      />
-
-      {/* The Centered 'F' */}
-      <path 
-        d="M 38 25 H 68 V 35 H 48 V 45 H 63 V 55 H 48 V 70 H 38 V 25 Z" 
-        fill="white" 
-      />
+      {/* Brand Text Integrated for Google Verification */}
+      <text 
+        x="90" 
+        y="52" 
+        fill="#8b1219" 
+        style={{ 
+          font: "bold 32px sans-serif", 
+          letterSpacing: "-1px",
+          textTransform: "uppercase"
+        }}
+      >
+        FORTIS
+      </text>
+      <text 
+        x="90" 
+        y="78" 
+        fill="#475569" 
+        style={{ 
+          font: "400 20px sans-serif", 
+          letterSpacing: "2px"
+        }}
+      >
+        BUDGET
+      </text>
     </svg>
   );
 }

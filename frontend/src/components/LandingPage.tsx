@@ -1,11 +1,11 @@
 import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, BookOpen, PenTool, ShieldCheck, TrendingUp, Lock, Bell, Lightbulb, Coffee, ShoppingCart, ServerOff, AlertTriangle, Activity, PhoneIcon, SmartphoneIcon } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "../ui/card";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
+import { FortisLogo } from "./FortisLogo";
 
 // --- MOCK COMPONENTS (Mini App Widgets) ---
 
-// 1. Visual: Smart Alerts (NEW)
+// 1. Visual: Smart Alerts
 function MockAlertCard() {
   return (
     <Card className="w-full max-w-sm mx-auto shadow-xl border-slate-200 bg-white p-5 transform transition-all hover:scale-[1.02]">
@@ -144,6 +144,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
               <div className="flex items-center gap-3">
+                {/* Logo or Brand Name could go here */}
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -160,10 +161,9 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
         {/* Hero Section */}
         <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="text-center max-w-3xl mx-auto space-y-12" style={{ rowGap: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
-                FortisBudget
-              </h1>
+            <div className="mb-4">
+                <FortisLogo className="h-12 sm:h-16 w-auto animate-in fade-in zoom-in duration-700" />
+              </div>
               <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
                 Build better money habits through intentional tracking. No bank connections, no automated imports. Just you, your goals, and complete control.
               </p>
@@ -180,7 +180,6 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
                 <div className="flex items-center gap-2"><SmartphoneIcon className="w-5 h-5 text-red-600" /><span>Mobile Friendly</span></div>
               </div>
             </div>
-          </div>
         </section>
 
         {/* --- GRID SECTION --- */}
@@ -208,7 +207,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
                   <p className="text-gray-600 leading-relaxed">No bank passwords required. Your data stays local and safe.</p>
                 </div>
               </div>
-              {/* Feature 3: Smart Alerts (Replaced Growth) */}
+              {/* Feature 3: Smart Alerts */}
               <div className="group bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <div className="flex flex-col items-center text-center">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-red-100 text-red-600 mb-6"><Bell className="h-8 w-8" /></div>
@@ -370,8 +369,21 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
             </div>
             
             <div className="flex items-center mt-6 gap-6 text-sm font-medium">
-              <button onClick={onOpenPrivacy} className="hover:text-white transition-colors">Privacy Policy</button>
-              <button onClick={onOpenTerms} className="hover:text-white transition-colors">Terms of Service</button>
+              {/* UPDATED: Using anchor tags for Google Verification */}
+              <a 
+                href="#" 
+                onClick={(e) => { e.preventDefault(); onOpenPrivacy(); }} 
+                className="hover:text-white transition-colors"
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="#" 
+                onClick={(e) => { e.preventDefault(); onOpenTerms(); }} 
+                className="hover:text-white transition-colors"
+              >
+                Terms of Service
+              </a>
             </div>
 
             <p className="text-gray-600 mt-6 text-xs">
