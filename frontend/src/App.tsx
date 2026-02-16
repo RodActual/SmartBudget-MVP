@@ -75,7 +75,10 @@ export default function App() {
   const [userName, setUserName] = useState("User");
   const [savingsGoal, setSavingsGoal] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [isSetupComplete, setIsSetupComplete] = useState(true);
+  
+  // FIX 1: Default to FALSE. We assume they need setup until Firestore tells us otherwise.
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
+  
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
     budgetWarningEnabled: true,
     budgetWarningThreshold: 80,
@@ -104,25 +107,41 @@ export default function App() {
   // --- 4. AUTH EFFECTS ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+      // Don't set user immediately, wait until we verify everything
       if (currentUser) {
-        setShowVerificationBanner(!currentUser.emailVerified);
         try {
+          // FIX 2: Force token refresh to ensure emailVerified is current
+          await currentUser.reload();
+          setUser(currentUser); 
+          setShowVerificationBanner(!currentUser.emailVerified);
+
           const settingsRef = doc(db, "userSettings", currentUser.uid);
           const settingsDoc = await getDoc(settingsRef);
+          
           if (settingsDoc.exists()) {
             const data = settingsDoc.data();
             setUserName(data.userName || "User");
             setSavingsGoal(data.savingsGoal || 0);
             setNotificationsEnabled(data.notificationsEnabled ?? true);
-            setIsSetupComplete(data.isSetupComplete !== false);
+            
+            // FIX 3: Explicit check. If field is missing/undefined/false, this becomes FALSE.
+            setIsSetupComplete(data.isSetupComplete === true);
+            
             if (data.alertSettings) setAlertSettings(data.alertSettings);
+          } else {
+            // FIX 4: New User (Doc missing) -> Force Setup
+            setIsSetupComplete(false);
           }
         } catch (error) {
           console.error("Error loading settings:", error);
+          // Safety fallback
+          setIsSetupComplete(false);
         }
+      } else {
+        setUser(null);
+        setIsSetupComplete(false);
       }
-      setAuthLoading(false);
+      setAuthLoading(false); // Only stop loading after all logic is done
     });
     return () => unsubscribe();
   }, []);
@@ -153,10 +172,10 @@ export default function App() {
     setSavingsGoal(0);
     setActiveTab("dashboard");
     setAuthMode('landing');
+    setIsSetupComplete(false); // Reset on logout
   };
 
   const handleLegalBack = () => {
-    // Navigating back simply clears the overlay state
     setAuthMode('landing');
   };
 
@@ -194,7 +213,6 @@ export default function App() {
   // --- 7. ARCHIVE HANDLERS (Issue #5) ---
   const handleUpdateTransactionForArchive = async (id: string, updates: Partial<Transaction>) => {
     if (!user) return;
-    
     try {
       const transactionRef = doc(db, 'transactions', id);
       await updateDoc(transactionRef, updates);
@@ -207,7 +225,6 @@ export default function App() {
 
   const handleDeleteTransactionPermanently = async (id: string) => {
     if (!user) return;
-    
     try {
       const transactionRef = doc(db, 'transactions', id);
       await deleteDoc(transactionRef);
@@ -221,7 +238,7 @@ export default function App() {
   // --- 8. RENDERING ---
   if (authLoading) return <div className="min-h-screen flex items-center justify-center text-xl">Loading...</div>;
 
-  // Global Legal Overlays (Priority Rendering)
+  // Global Legal Overlays
   if (authMode === 'privacy') return <PrivacyPolicy onBack={handleLegalBack} />;
   if (authMode === 'terms') return <TermsOfService onBack={handleLegalBack} />;
 
@@ -288,7 +305,12 @@ export default function App() {
           {/* Main Content Gate */}
           {user?.emailVerified ? (
             !isSetupComplete ? (
-               <WelcomeSetup userId={user.uid} onComplete={(name, goal) => { setUserName(name); setSavingsGoal(goal); setIsSetupComplete(true); }} />
+               <WelcomeSetup 
+                 userId={user.uid} 
+                 onComplete={() => { 
+                   setIsSetupComplete(true); 
+                 }} 
+               />
             ) : (
               <>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

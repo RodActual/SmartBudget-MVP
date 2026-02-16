@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react"; // 1. Added useEffect
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -71,11 +71,11 @@ export function SettingsPage({
     return transactions.filter(t => t.archived === true);
   }, [transactions]);
 
-  // Sync temp values when hook values change
-  useState(() => {
+  // 2. CHANGED: Used useEffect to correctly sync form with fetched data
+  useEffect(() => {
     setTempUserName(userName);
     setTempSavingsGoal(savingsGoal.toString());
-  });
+  }, [userName, savingsGoal]);
 
   // Save settings handler
   const handleSave = async () => {
@@ -85,6 +85,7 @@ export function SettingsPage({
       if (tempUserName.trim()) updateUserName(tempUserName.trim());
       const goalValue = parseFloat(tempSavingsGoal);
       if (!isNaN(goalValue) && goalValue >= 0) updateSavingsGoal(goalValue);
+      // Fake delay for UX feel
       await new Promise(resolve => setTimeout(resolve, 500)); 
       setSaveMessage({ type: 'success', text: "Settings saved successfully! ✅" });
     } catch (e) {
@@ -95,7 +96,7 @@ export function SettingsPage({
     }
   };
 
-  // Password update handler (moved from App.tsx)
+  // Password update handler
   const handleUpdatePassword = async () => {
     setPasswordError("");
     setPasswordSuccess("");
@@ -140,7 +141,7 @@ export function SettingsPage({
     }
   };
 
-  // Delete account handler (moved from App.tsx)
+  // Delete account handler
   const handleDeleteAccount = async () => {
     setDeleteError("");
     

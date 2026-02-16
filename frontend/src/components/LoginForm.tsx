@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  sendEmailVerification 
+} from "firebase/auth";
 import { auth, db } from "../firebase"; 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Button } from "../ui/button";
@@ -41,14 +47,19 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
 
     try {
       if (isSignUp) {
-        // Sign Up Logic
+        // --- SIGN UP LOGIC ---
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // FIX: Send verification email IMMEDIATELY before doing database work.
+        // This ensures the email is sent even if the database write fails or the component unmounts.
+        await sendEmailVerification(user);
+        
+        // Create User Settings in Firestore
         await setDoc(doc(db, "userSettings", user.uid), {
           userName: email.split("@")[0],
           savingsGoal: 0,
-          isSetupComplete: false,
+          isSetupComplete: false, // Default to false to trigger Wizard
           notificationsEnabled: true,
           alertSettings: {
             budgetWarningEnabled: true,
@@ -62,10 +73,13 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
           updatedAt: new Date().toISOString(),
         });
 
-        await sendEmailVerification(user);
-        setSuccessMessage("Account created! Please check your email to verify your account.");
+        setSuccessMessage("Account created! Verification email sent.");
+        
+        // Note: The App component might detect the user is logged in and unmount this form 
+        // immediately, so the user might not see the success message. This is expected behavior.
+        
       } else {
-        // Sign In Logic
+        // --- SIGN IN LOGIC ---
         await signInWithEmailAndPassword(auth, email, password);
         onLogin();
       }
@@ -77,9 +91,12 @@ export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) 
       if (err.code === "auth/weak-password") msg = "Password should be at least 6 characters";
       if (err.code === "auth/wrong-password") msg = "Invalid password";
       if (err.code === "auth/user-not-found") msg = "User not found";
+      if (err.code === "auth/too-many-requests") msg = "Too many attempts. Try again later.";
       setError(msg);
     } finally {
-      setLoading(false);
+      // Only stop loading if we are NOT successful (if successful, component might unmount)
+      if (error) setLoading(false);
+      else setLoading(false); 
     }
   };
 
