@@ -144,7 +144,8 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
               <div className="flex items-center gap-3">
-                {/* Logo or Brand Name could go here */}
+                {/* FIXED: Added explicit size control to logo */}
+                <FortisLogo className="h-10 w-auto sm:h-12" />
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -161,8 +162,12 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
         {/* Hero Section */}
         <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="mb-4">
-                <FortisLogo className="h-12 sm:h-16 w-auto animate-in fade-in zoom-in duration-700" />
+            {/* Logo in hero - forced size with inline style */}
+            <div className="text-center mb-8">
+              <div className="mb-4 flex justify-center">
+                <div style={{ maxHeight: '120px', height: '120px' }}>
+                  <FortisLogo className="h-full w-auto animate-in fade-in zoom-in duration-700" />
+                </div>
               </div>
               <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
                 Build better money habits through intentional tracking. No bank connections, no automated imports. Just you, your goals, and complete control.
@@ -180,6 +185,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
                 <div className="flex items-center gap-2"><SmartphoneIcon className="w-5 h-5 text-red-600" /><span>Mobile Friendly</span></div>
               </div>
             </div>
+        </div>
         </section>
 
         {/* --- GRID SECTION --- */}
@@ -362,14 +368,15 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
         <footer className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-8">
             <div className="flex flex-col items-center gap-4">
-              <span className="text-2xl font-bold text-white tracking-tight">FortisBudget</span>
+              {/* FIXED: Logo in footer with appropriate size */}
+              <FortisLogo className="h-10 w-auto sm:h-10" />
+              <span className="text-2xl font-bold text-black-600 tracking-tight">FortisBudget</span>
               <p className="text-gray-500 text-center max-w-md leading-relaxed">
                 Built for intentional spenders who want to take manual control of their financial future.
               </p>
             </div>
             
             <div className="flex items-center mt-6 gap-6 text-sm font-medium">
-              {/* UPDATED: Using anchor tags for Google Verification */}
               <a 
                 href="#" 
                 onClick={(e) => { e.preventDefault(); onOpenPrivacy(); }} 

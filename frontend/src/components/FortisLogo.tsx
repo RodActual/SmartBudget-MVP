@@ -7,6 +7,7 @@ export function FortisLogo({ className = "h-12 w-auto" }: { className?: string }
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      preserveAspectRatio="xMidYMid meet"
     >
       <defs>
         {/* USACE Style Deep Red Gradient */}
