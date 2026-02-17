@@ -165,7 +165,7 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
             {/* Logo in hero - forced size with inline style */}
             <div className="text-center mb-8">
               <div className="mb-4 flex justify-center">
-                <div style={{ maxHeight: '120px', height: '120px' }}>
+                <div style={{ maxHeight: '80px', height: '80px' }}>
                   <FortisLogo className="h-full w-auto animate-in fade-in zoom-in duration-700" />
                 </div>
               </div>
@@ -177,6 +177,23 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
                   Start Tracking for Free <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
+              {/* Privacy Policy Link for Google Verification */}
+              <p className="text-sm text-gray-500 mt-4">
+                By signing up, you agree to our{' '}
+                <button 
+                  onClick={onOpenTerms}
+                  className="text-blue-600 hover:text-blue-700 underline font-medium"
+                >
+                  Terms of Service
+                </button>
+                {' '}and{' '}
+                <button 
+                  onClick={onOpenPrivacy}
+                  className="text-blue-600 hover:text-blue-700 underline font-medium"
+                >
+                  Privacy Policy
+                </button>
+              </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-gray-500 font-medium pt-8">
                 <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-green-600" /><span>Private & Secure</span></div>
                 <div className="hidden sm:block text-gray-300">•</div>
@@ -361,6 +378,23 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
                 Start Your Journey <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
+            {/* Privacy Policy Link */}
+            <p className="text-sm text-blue-100 mt-4">
+              By getting started, you agree to our{' '}
+              <button 
+                onClick={onOpenTerms}
+                className="text-blue-600 hover:text-blue-700 underline font-medium"
+              >
+                Terms of Service
+              </button>
+              {' '}and{' '}
+              <button 
+                onClick={onOpenPrivacy}
+                className="text-blue-600 hover:text-blue-700 underline font-medium"
+              >
+                Privacy Policy
+              </button>
+            </p>
           </div>
         </section>
 
@@ -369,8 +403,8 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-8">
             <div className="flex flex-col items-center gap-4">
               {/* FIXED: Logo in footer with appropriate size */}
-              <FortisLogo className="h-10 w-auto sm:h-10" />
-              <span className="text-2xl font-bold text-black-600 tracking-tight">FortisBudget</span>
+              <FortisLogo className="h-10 w-auto sm:h-12" />
+              <span className="text-2xl font-bold text-black tracking-tight">FortisBudget</span>
               <p className="text-gray-500 text-center max-w-md leading-relaxed">
                 Built for intentional spenders who want to take manual control of their financial future.
               </p>
