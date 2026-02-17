@@ -403,21 +403,22 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-8">
             <div className="flex flex-col items-center gap-4">
               {/* FIXED: Logo in footer with appropriate size */}
-              <FortisLogo className="h-10 w-auto sm:h-12" />
-              <span className="text-2xl font-bold text-black tracking-tight">FortisBudget</span>
+              <FortisLogo className="h-12 w-auto sm:h-16" />
               <p className="text-gray-500 text-center max-w-md leading-relaxed">
                 Built for intentional spenders who want to take manual control of their financial future.
               </p>
             </div>
             
             <div className="flex items-center mt-6 gap-6 text-sm font-medium">
-              <a 
-                href="#" 
-                onClick={(e) => { e.preventDefault(); onOpenPrivacy(); }} 
-                className="hover:text-white transition-colors"
-              >
-                Privacy Policy
-              </a>
+  {/* TARGETED FIX: Real file path for Google Bots */}
+  <a 
+    href="/privacy-policy.html" 
+    target="_blank" 
+    rel="noopener noreferrer"
+    className="hover:text-white transition-colors underline decoration-gray-700 underline-offset-4"
+  >
+    Privacy Policy
+  </a>
               <a 
                 href="#" 
                 onClick={(e) => { e.preventDefault(); onOpenTerms(); }} 
