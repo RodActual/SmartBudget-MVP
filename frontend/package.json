@@ -1,12 +1,12 @@
 {
-  "name": "frontend",
+  "name": "fortis-budget",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "homepage": "https://RodActual.github.io/FortisBudget",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node update-version.js && vite build",
     "preview": "vite preview",
     "tailwind": "npx @tailwindcss/cli -i ./src/index.css -o ./src/output.css --watch",
     "storybook": "storybook dev -p 6006",
