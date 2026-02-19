@@ -6,7 +6,7 @@
   "homepage": "https://RodActual.github.io/FortisBudget",
   "scripts": {
     "dev": "vite",
-    "build": "node update-version.js && vite build",
+    "build": "node update-version.cjs && vite build",
     "preview": "vite preview",
     "tailwind": "npx @tailwindcss/cli -i ./src/index.css -o ./src/output.css --watch",
     "storybook": "storybook dev -p 6006",
