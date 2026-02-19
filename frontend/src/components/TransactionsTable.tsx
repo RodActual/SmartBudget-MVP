@@ -30,7 +30,7 @@ interface TransactionsTableProps {
 }
 
 export function TransactionsTable({ transactions, onEdit, onDelete }: TransactionsTableProps) {
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | number) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       month: "short",
