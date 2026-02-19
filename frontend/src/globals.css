@@ -1,38 +1,38 @@
-/* src/globals.css — Fortis v1.0.0 Strategic Color System */
+/* src/globals.css — Fortis v1.0.0 Sovereign Color System */
 
 /* Fortis Brand Font Stack */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* ============================================================
    FORTIS STRATEGIC COLOR PALETTE
-   Inspired by 12B Combat Engineer / USACE Heritage
+   Sovereign Style — Premium, Student & Young Professional Focus
    ============================================================ */
 :root {
   /* === Primary Brand Colors === */
-  --castle-red:     #8B1219;   /* Primary brand — buttons, primary icons */
-  --castle-red-dark:#630D12;   /* Hover state for castle red */
-  --engine-navy:    #1B263B;   /* Structural navy — nav bars, sidebar */
-  --field-green:    #166534;   /* Healthy/positive — under budget, savings */
-  --safety-amber:   #D97706;   /* Warning — 85%–99% threshold */
-  --fortress-steel: #475569;   /* Secondary text — labels, grid lines */
+  --castle-red:     #9B1B30;   /* Deep Crimson — Primary actions, highlights */
+  --castle-red-dark:#7A1526;   /* Hover state for Crimson */
+  --engine-navy:    #0F172A;   /* Slate Midnight — Structural navy, headings */
+  --field-green:    #10B981;   /* Emerald Green — Healthy savings, positive flow */
+  --safety-amber:   #F59E0B;   /* Amber — Caution thresholds (85%+) */
+  --fortress-steel: #64748B;   /* Slate Blue — Secondary labels, borders */
 
   /* === Background / Surface === */
-  --bg:             #F8FAFC;   /* Concrete Slate — main app background */
+  --bg:             #F8FAFC;   /* Slate White — Main app background */
   --surface:        #FFFFFF;   /* Card surface */
-  --surface-raised: #F1F5F9;   /* Slightly elevated surfaces */
-  --border:         #CBD5E1;   /* Structural borders */
-  --border-subtle:  #E2E8F0;   /* Subtle dividers */
+  --surface-raised: #F1F5F9;   /* Subtle elevation */
+  --border:         #E2E8F0;   /* Clean dividers */
+  --border-subtle:  #F8FAFC;   /* Very soft dividers */
 
   /* === Text === */
-  --text-primary:   #0F172A;   /* Near-black — headings, key data */
-  --text-secondary: #475569;   /* Fortress Steel — body copy, labels */
-  --text-muted:     #94A3B8;   /* Deactivated states, placeholders */
+  --text-primary:   #0F172A;   /* Slate Midnight — Headings, key data */
+  --text-secondary: #475569;   /* Slate Gray — Body copy, labels */
+  --text-muted:     #94A3B8;   /* Muted placeholders */
 
   /* === Semantic / Status Colors === */
-  --status-healthy: #166534;   /* < 85% spent */
-  --status-caution: #D97706;   /* 85%–99% spent */
-  --status-breach:  #991B1B;   /* 100% spent */
-  --status-combat:  #0F172A;   /* Over budget — full inversion */
+  --status-healthy: #10B981;   /* < 85% spent */
+  --status-caution: #F59E0B;   /* 85%–99% spent */
+  --status-limit:   #E11D48;   /* 100% spent (Formerly breach) */
+  --status-over:    #0F172A;   /* Over budget (Formerly combat) */
 
   /* === Shadcn/Radix CSS Variable Bridge ===
      These map Fortis values to the variable names used by
@@ -51,14 +51,14 @@
   --accent-foreground:   var(--text-primary);
   --destructive:         var(--castle-red);
   --destructive-foreground: #FFFFFF;
-  --border-color:        var(--border-subtle);
+  --border-color:        var(--border);
   --input:               var(--border);
   --input-background:    var(--surface);
-  --ring:                var(--engine-navy);
+  --ring:                var(--castle-red);
   --popover:             var(--surface);
   --popover-foreground:  var(--text-primary);
   --switch-background:   var(--border);
-  --radius:              0.375rem; /* Slightly sharp — more "engineered" */
+  --radius:              0.5rem; /* Softer, modern radius (was 0.375rem) */
 
   /* === Chart palette === */
   --chart-1: var(--castle-red);
@@ -81,7 +81,7 @@ html:not(.dark) {
 
 /* ============================================================
    BASE TYPOGRAPHY
-   "Technical Manual" aesthetic — precise, purposeful
+   Clean, airy, and modern aesthetic
    ============================================================ */
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -102,7 +102,8 @@ body {
 
 /* Headings — tight, authoritative */
 h1, h2, h3, h4, h5, h6 {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 
 /* ============================================================
@@ -122,21 +123,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 .budget-caution .budget-status-label { color: var(--safety-amber); }
 
-/* Tier 3 — Breach (exactly 100%) */
-.budget-breach {
-  border-left: 4px solid #991B1B !important;
+/* Tier 3 — Limit Reached (exactly 100%) - Formerly Breach */
+.budget-limit {
+  border-left: 4px solid var(--status-limit) !important;
 }
-.budget-breach .budget-status-label { color: #991B1B; }
+.budget-limit .budget-status-label { color: var(--status-limit); }
 
-/* Tier 4 — Combat (over 100%) */
-.budget-combat {
+/* Tier 4 — Over Budget (over 100%) - Formerly Combat */
+.budget-over {
   background-color: var(--engine-navy) !important;
   color: #FFFFFF !important;
   border-left: 4px solid var(--castle-red) !important;
 }
-.budget-combat .budget-status-label { color: #FCA5A5; }
-.budget-combat p, .budget-combat span { color: #CBD5E1; }
-.budget-combat h4 { color: #FFFFFF; }
+.budget-over .budget-status-label { color: #FDA4AF; }
+.budget-over p, .budget-over span { color: #94A3B8; }
+.budget-over h4 { color: #FFFFFF; }
 
 /* ============================================================
    COMPONENT SOLIDIFICATION
@@ -173,7 +174,7 @@ textarea, select {
 }
 
 [data-slot="progress"] {
-  background-color: var(--surface-raised) !important;
+  background-color: var(--border) !important;
   opacity: 1 !important;
 }
 
@@ -196,86 +197,87 @@ textarea, select {
 }
 
 /* ============================================================
-   CARD STYLING — "Engineered" look
-   Slightly sharp corners, subtle tactile shadow
+   CARD STYLING — Premium Fintech Look
+   Modern radius, clean and airy shadow
    ============================================================ */
 [data-slot="card"] {
-  border-radius: 0.375rem !important;
-  border-color: var(--border-subtle) !important;
+  border-radius: var(--radius) !important;
+  border-color: var(--border) !important;
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.03) !important;
 }
 
 [data-slot="dialog-content"],
 [data-slot="alert-dialog-content"] {
+  border-radius: var(--radius) !important;
   box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.12),
-    0 10px 10px -5px rgba(0, 0, 0, 0.06) !important;
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* ============================================================
-   BUTTON TACTILE FEEL — "Pressable hardware" aesthetic
+   BUTTON TACTILE FEEL — Smooth scaling instead of harsh shadows
    ============================================================ */
 [data-slot="button"]:not([disabled]) {
-  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.12) !important;
-  transition: all 120ms ease !important;
+  border-radius: var(--radius) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 150ms ease !important;
 }
 [data-slot="button"]:not([disabled]):active {
-  transform: translateY(1px) !important;
-  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.12) !important;
+  transform: scale(0.98) !important;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0) !important;
 }
 
-/* Castle Red primary action button */
+/* Deep Crimson primary action button */
 .btn-fortis-primary {
   background-color: var(--castle-red) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 0 0 var(--castle-red-dark) !important;
 }
 .btn-fortis-primary:hover:not([disabled]) {
   background-color: var(--castle-red-dark) !important;
 }
 
-/* Engine Navy structural button */
+/* Slate Midnight structural button */
 .btn-fortis-navy {
   background-color: var(--engine-navy) !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 0 0 #0F1C30 !important;
 }
 .btn-fortis-navy:hover:not([disabled]) {
-  background-color: #0F1C30 !important;
+  background-color: #1E293B !important; /* Lighter slate hover */
 }
 
 /* ============================================================
-   NAVIGATION BAR — Engine Navy
+   NAVIGATION BAR — Modern Surface
    ============================================================ */
 .fortis-nav {
-  background-color: var(--engine-navy) !important;
-  border-bottom: 1px solid #243450 !important;
+  background-color: var(--surface) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 /* ============================================================
-   TRANSITIONS — Smooth but not sluggish
+   TRANSITIONS — Smooth and responsive
    ============================================================ */
 * {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 120ms;
+  transition-duration: 150ms;
 }
 
 /* ============================================================
    MISC UTILITIES
    ============================================================ */
 ::backdrop {
-  background-color: rgba(15, 23, 42, 0.6); /* navy-tinted overlay */
+  background-color: rgba(15, 23, 42, 0.4); /* Softer slate overlay */
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--surface-raised); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
+  background: var(--text-muted);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--fortress-steel); }
 
