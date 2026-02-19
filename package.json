@@ -5,5 +5,11 @@
   },
   "devDependencies": {
     "@types/node": "^25.2.3"
-  }
+  },
+  "scripts": {  
+  "prebuild": "node update-version.js",
+  "build": "tsc && vite build",
+  "deploy": "npm run build && firebase deploy"
+}
+
 }

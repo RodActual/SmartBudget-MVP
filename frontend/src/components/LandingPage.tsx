@@ -2,6 +2,7 @@ import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, BookOpen, PenTool, ShieldCheck, TrendingUp, Lock, Bell, Lightbulb, Coffee, ShoppingCart, ServerOff, AlertTriangle, Activity, PhoneIcon, SmartphoneIcon } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { FortisLogo } from "./FortisLogo";
+import { FORTIS_VERSION, LAST_DEPLOYED } from "../version";
 
 // --- MOCK COMPONENTS (Mini App Widgets) ---
 
@@ -432,6 +433,11 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
               &copy; {new Date().getFullYear()} FortisBudget. All rights reserved.
             </p>
           </div>
+          
+<div className="text-[10px] text-gray-500 font-mono mt-4 text-center">
+  Release: {FORTIS_VERSION} | Ref: {LAST_DEPLOYED}
+</div>
+
         </footer>
       </main>
     </div>

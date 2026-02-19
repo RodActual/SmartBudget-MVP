@@ -28,6 +28,7 @@ import { useUserSettings } from "../hooks/useUserSettings";
 import { auth, db } from "../firebase";
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { collection, query, where, getDocs, writeBatch, doc } from "firebase/firestore";
+import { FORTIS_VERSION, LAST_DEPLOYED } from "../version";
 
 interface SettingsPageProps {
   budgets: Budget[];
@@ -411,9 +412,9 @@ export function SettingsPage({
             <Button variant="outline" size="sm" onClick={() => onNavigate('privacy')} className="flex-1 border-slate-200 text-slate-600">View Privacy Policy</Button>
             <Button variant="outline" size="sm" onClick={() => onNavigate('terms')} className="flex-1 border-slate-200 text-slate-600">View Terms of Service</Button>
           </div>
-          <p className="text-[10px] text-slate-400 uppercase tracking-widest text-center">
-            FortisBudget Prototype v1.0.0 | © 2026 FortisBudget
-          </p>
+          <div className="text-[10px] text-gray-500 font-mono mt-4 text-center">
+  Release: {FORTIS_VERSION} | Ref: {LAST_DEPLOYED}
+</div>
         </CardContent>
       </Card>
 
