@@ -1,5 +1,5 @@
 const fs = require('fs');
-const pkg = require('../package.json');
+const pkg = require('./package.json');
 
 // 1. Get the current time in EST
 const date = new Date();
