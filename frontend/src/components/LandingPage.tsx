@@ -2,7 +2,7 @@ import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, BookOpen, PenTool, ShieldCheck, TrendingUp, Lock, Bell, Lightbulb, Coffee, ShoppingCart, ServerOff, AlertTriangle, Activity, PhoneIcon, SmartphoneIcon } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { FortisLogo } from "./FortisLogo";
-import { FORTIS_VERSION, LAST_DEPLOYED } from "../version";
+import { FORTIS_VERSION, GIT_HASH, LAST_DEPLOYED } from "../version";
 
 // --- MOCK COMPONENTS (Mini App Widgets) ---
 
@@ -434,8 +434,10 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
             </p>
           </div>
           
-<div className="text-[10px] text-gray-500 font-mono mt-4 text-center">
-  Release: {FORTIS_VERSION} | Ref: {LAST_DEPLOYED}
+<div className="flex flex-col items-center justify-center w-full mt-12 pb-8 opacity-40">
+  <p className="text-[10px] font-mono text-gray-500 uppercase">
+    FORTIS_v{FORTIS_VERSION} // {GIT_HASH} // {LAST_DEPLOYED}
+  </p>
 </div>
 
         </footer>

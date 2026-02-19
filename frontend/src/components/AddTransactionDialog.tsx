@@ -35,22 +35,21 @@ export function AddTransactionDialog({
   onAddTransaction,
   onEditTransaction,
   editingTransaction,
-  budgets, 
+  budgets,
 }: AddTransactionDialogProps) {
   const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("");
-  const [type, setType] = useState<"income" | "expense">("expense");
-  const [date, setDate] = useState(formatDateForInput(new Date())); // ✅ FIXED: Use date utility
+  const [amount, setAmount]           = useState("");
+  const [category, setCategory]       = useState("");
+  const [type, setType]               = useState<"income" | "expense">("expense");
+  const [date, setDate]               = useState(formatDateForInput(new Date()));
 
-  // Reset or populate form
   useEffect(() => {
     if (editingTransaction) {
       setDescription(editingTransaction.description);
       setAmount(editingTransaction.amount.toString());
       setCategory(editingTransaction.category);
       setType(editingTransaction.type);
-      setDate(formatDateForInput(editingTransaction.date)); // ✅ FIXED: Use date utility
+      setDate(formatDateForInput(editingTransaction.date));
     } else {
       setDescription("");
       setAmount("");
@@ -62,7 +61,6 @@ export function AddTransactionDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!description || !amount || !category) return;
 
     const transactionData = {
@@ -77,66 +75,98 @@ export function AddTransactionDialog({
       onEditTransaction(transactionData);
     } else {
       onAddTransaction(transactionData);
-    }
-
-    if (!editingTransaction) {
-        setDescription("");
-        setAmount("");
-        setCategory("");
+      setDescription("");
+      setAmount("");
+      setCategory("");
     }
   };
 
-  // Generate categories dynamically from Budgets
-  // Uses a Set to ensure "Income" and "Other" are always present but unique
   const uniqueCategories = Array.from(new Set([
     ...budgets.map(b => b.category),
     "Income",
-    "Other"
+    "Other",
   ]));
+
+  // ── Label style ────────────────────────────────────────────────────────────
+  const labelStyle: React.CSSProperties = {
+    color: "var(--text-primary)",
+    fontWeight: 600,
+    fontSize: "0.8125rem",
+    letterSpacing: "0.01em",
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle
+              className="text-lg font-bold tracking-tight"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {editingTransaction ? "Edit Transaction" : "Log Transaction"}
+            </DialogTitle>
+            <DialogDescription style={{ color: "var(--fortress-steel)" }}>
               {editingTransaction
                 ? "Update the transaction details below."
-                : "Add a new transaction to track your spending or income."}
+                : "Record a new income or expense entry."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="date">Date</Label>
+            {/* Date */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="date" style={labelStyle}>Date</Label>
               <Input
                 id="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
+                style={{
+                  backgroundColor: "var(--surface-raised)",
+                  borderColor: "var(--border-subtle)",
+                  color: "var(--text-primary)",
+                  fontFamily: "var(--font-mono)",
+                }}
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+            {/* Description */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="description" style={labelStyle}>Description</Label>
               <Input
                 id="description"
                 placeholder="Enter description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
+                style={{
+                  backgroundColor: "var(--surface-raised)",
+                  borderColor: "var(--border-subtle)",
+                  color: "var(--text-primary)",
+                }}
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
+            {/* Category */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="category" style={labelStyle}>Category</Label>
               <Select value={category} onValueChange={setCategory} required>
-                <SelectTrigger id="category">
+                <SelectTrigger
+                  id="category"
+                  style={{
+                    backgroundColor: "var(--surface-raised)",
+                    borderColor: "var(--border-subtle)",
+                    color: category ? "var(--text-primary)" : "var(--text-muted)",
+                  }}
+                >
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
                   {uniqueCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
@@ -144,38 +174,85 @@ export function AddTransactionDialog({
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="type">Type</Label>
-              <Select value={type} onValueChange={(value: "income" | "expense") => setType(value)} required>
-                <SelectTrigger id="type">
+            {/* Type */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="type" style={labelStyle}>Type</Label>
+              <Select value={type} onValueChange={(v: "income" | "expense") => setType(v)}>
+                <SelectTrigger
+                  id="type"
+                  style={{
+                    backgroundColor: "var(--surface-raised)",
+                    borderColor: "var(--border-subtle)",
+                    color: type === "income" ? "var(--field-green)" : "var(--castle-red)",
+                    fontWeight: 600,
+                  }}
+                >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="expense">Expense</SelectItem>
-                  <SelectItem value="income">Income</SelectItem>
+                <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
+                  <SelectItem value="expense">
+                    <span style={{ color: "var(--castle-red)", fontWeight: 600 }}>Expense</span>
+                  </SelectItem>
+                  <SelectItem value="income">
+                    <span style={{ color: "var(--field-green)", fontWeight: 600 }}>Income</span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="amount">Amount</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-              />
+            {/* Amount */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="amount" style={labelStyle}>Amount</Label>
+              <div className="relative">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold font-mono pointer-events-none"
+                  style={{ color: "var(--fortress-steel)" }}
+                >
+                  $
+                </span>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  required
+                  className="pl-7 font-mono"
+                  style={{
+                    backgroundColor: "var(--surface-raised)",
+                    borderColor: "var(--border-subtle)",
+                    color: "var(--text-primary)",
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              style={{
+                borderColor: "var(--border-subtle)",
+                color: "var(--fortress-steel)",
+                backgroundColor: "transparent",
+              }}
+            >
               Cancel
             </Button>
-            <Button type="submit">{editingTransaction ? "Update" : "Add"} Transaction</Button>
+            <Button
+              type="submit"
+              className="font-bold tracking-wide text-white"
+              style={{
+                backgroundColor: "var(--castle-red)",
+                boxShadow: "0 2px 0 0 var(--castle-red-dark)",
+                border: "none",
+              }}
+            >
+              {editingTransaction ? "Update" : "Log"} Transaction
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

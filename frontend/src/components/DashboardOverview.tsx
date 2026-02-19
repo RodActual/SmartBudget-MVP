@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Plus, TrendingDown, TrendingUp, Wallet, Target } from "lucide-react";
 import type { Budget, Transaction } from "../App";
-import { DailyTipCard } from "./DailyTipCard"; 
+import { DailyTipCard } from "./DailyTipCard";
 import { useUserSettings } from "../hooks/useUserSettings";
 
 interface DashboardOverviewProps {
@@ -12,248 +12,345 @@ interface DashboardOverviewProps {
   onOpenAddTransaction: () => void;
 }
 
+// ─── Four-Tier Budget Classification ────────────────────────────────────────
+function getBudgetTier(spent: number, budgeted: number): {
+  className: string;
+  barColor: string;
+  labelColor: string;
+  label: string;
+} {
+  if (budgeted === 0) return {
+    className: "",
+    barColor: "var(--fortress-steel)",
+    labelColor: "var(--fortress-steel)",
+    label: "—",
+  };
+
+  const pct = (spent / budgeted) * 100;
+
+  if (spent > budgeted) return {
+    className: "budget-combat",
+    barColor: "var(--castle-red)",
+    labelColor: "#FCA5A5",
+    label: "OVER BUDGET",
+  };
+  if (pct >= 100) return {
+    className: "budget-breach",
+    barColor: "#991B1B",
+    labelColor: "#991B1B",
+    label: "BREACH",
+  };
+  if (pct >= 85) return {
+    className: "budget-caution",
+    barColor: "var(--safety-amber)",
+    labelColor: "var(--safety-amber)",
+    label: "CAUTION",
+  };
+  return {
+    className: "budget-secure",
+    barColor: "var(--field-green)",
+    labelColor: "var(--field-green)",
+    label: "SECURE",
+  };
+}
+
 export function DashboardOverview({
   budgets,
   transactions,
   onOpenAddTransaction,
 }: DashboardOverviewProps) {
-  // Use custom hook for user settings
   const { userName, savingsGoal } = useUserSettings();
-  
+
   const financialTotals = useMemo(() => {
     const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
-    const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-    
-    // Calculate income/expenses only from active (non-archived) transactions
+    const totalSpent  = budgets.reduce((sum, b) => sum + b.spent, 0);
+
     const activeTransactions = transactions.filter(t => !t.archived);
-
-    const totalIncome = activeTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalExpenses = activeTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
-    
-    const totalBalance = totalIncome - totalExpenses;
-    const savings = totalBalance > 0 ? totalBalance : 0;
+    const totalIncome   = activeTransactions.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const totalExpenses = activeTransactions.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const totalBalance  = totalIncome - totalExpenses;
+    const savings       = totalBalance > 0 ? totalBalance : 0;
     const remainingBudget = totalBudget - totalSpent;
 
-    return {
-      totalBudget,
-      totalSpent,
-      totalIncome,
-      totalExpenses,
-      totalBalance,
-      savings,
-      remainingBudget
-    };
-  }, [budgets, transactions]); // Only recalculate when data changes
+    return { totalBudget, totalSpent, totalIncome, totalExpenses, totalBalance, savings, remainingBudget };
+  }, [budgets, transactions]);
 
-  // Recent transactions (last 5) - Memoized to prevent slice churn
-  const recentTransactions = useMemo(() => {
-    return transactions
-      .filter(t => !t.archived)
-      .slice(0, 5);
-  }, [transactions]);
+  const recentTransactions = useMemo(() => (
+    transactions.filter(t => !t.archived).slice(0, 5)
+  ), [transactions]);
 
-  const { 
-    totalIncome, 
-    totalExpenses, 
-    totalBalance, 
-    savings, 
-    remainingBudget 
-  } = financialTotals;
+  const { totalIncome, totalExpenses, totalBalance, savings, remainingBudget } = financialTotals;
+
+  // ─── Summary card definitions ──────────────────────────────────────────────
+  const summaryCards = [
+    {
+      title: "Total Income",
+      value: `$${totalIncome.toFixed(2)}`,
+      sub: "All-time earnings",
+      icon: TrendingUp,
+      iconColor: "var(--field-green)",
+      iconBg: "#DCFCE7",
+      valueColor: "var(--field-green)",
+    },
+    {
+      title: "Total Expenses",
+      value: `$${totalExpenses.toFixed(2)}`,
+      sub: "All-time spending",
+      icon: TrendingDown,
+      iconColor: "var(--castle-red)",
+      iconBg: "#FEE2E2",
+      valueColor: "var(--castle-red)",
+    },
+    {
+      title: "Available Budget",
+      value: `$${remainingBudget.toFixed(2)}`,
+      sub: "Remaining to spend",
+      icon: Wallet,
+      iconColor: remainingBudget < 0 ? "var(--castle-red)" : "var(--fortress-steel)",
+      iconBg: remainingBudget < 0 ? "#FEE2E2" : "var(--surface-raised)",
+      valueColor: remainingBudget < 0 ? "var(--castle-red)" : "var(--text-primary)",
+    },
+    {
+      title: "Savings Progress",
+      value: `$${savings.toFixed(2)}`,
+      sub: savingsGoal > 0
+        ? `${Math.min(((savings / savingsGoal) * 100), 100).toFixed(0)}% of $${savingsGoal.toFixed(2)} goal`
+        : "Set a goal in Settings",
+      icon: Target,
+      iconColor: "var(--engine-navy)",
+      iconBg: "#DBEAFE",
+      valueColor: "var(--engine-navy)",
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+
+      {/* ── Page Header ────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl text-black">Welcome back, {userName}!</h1>
-          <p className="text-black mt-1">
-            Here's an overview of your finances
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            Welcome back, <span style={{ color: 'var(--castle-red)' }}>{userName}</span>
+          </h1>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--fortress-steel)' }}>
+            Here's your financial situation report.
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground">Total Balance</p>
-          <p className={`text-3xl ${totalBalance >= 0 ? "text-[#00A86B]" : "text-destructive"}`}>
-            ${totalBalance.toFixed(2)}
+
+        {/* Balance Badge */}
+        <div 
+          className="text-right px-4 py-2 rounded-lg border"
+          style={{ 
+            backgroundColor: 'var(--surface)',
+            borderColor: 'var(--border-subtle)',
+          }}
+        >
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--fortress-steel)' }}>
+            Net Balance
+          </p>
+          <p 
+            className="text-2xl font-bold font-mono"
+            style={{ color: totalBalance >= 0 ? 'var(--field-green)' : 'var(--castle-red)' }}
+          >
+            {totalBalance >= 0 ? '+' : ''}${totalBalance.toFixed(2)}
           </p>
         </div>
       </div>
 
-      {/* Buttons Row */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Button onClick={onOpenAddTransaction} size="lg" className="w-full sm:w-auto text-black">
+      {/* ── Add Transaction ─────────────────────────────────────────────────── */}
+      <div>
+        <Button
+          onClick={onOpenAddTransaction}
+          size="lg"
+          className="font-bold tracking-wide text-white"
+          style={{
+            backgroundColor: 'var(--castle-red)',
+            borderColor: 'var(--castle-red-dark)',
+            boxShadow: '0 2px 0 0 var(--castle-red-dark)',
+          }}
+        >
           <Plus className="h-5 w-5 mr-2" />
-          Add Transaction
+          Log Transaction
         </Button>
       </div>
 
-      {/* Daily Tip Section */}
-      <div className="w-full">
-        <DailyTipCard />
-      </div>
+      {/* ── Daily Tip ───────────────────────────────────────────────────────── */}
+      <DailyTipCard />
 
-      {/* Summary Cards */}
+      {/* ── Summary Cards ───────────────────────────────────────────────────── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Total Income</CardTitle>
-            <TrendingUp className="h-4 w-4 text-[#00A86B]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl">${totalIncome.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All time earnings
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Total Expenses</CardTitle>
-            <TrendingDown className="h-4 w-4 text-[#dc2626]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl">${totalExpenses.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              All time spending
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Available Budget</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl ${remainingBudget < 0 ? 'text-red-500' : ''}`}>
-                ${remainingBudget.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Remaining to spend
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm">Savings Progress</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl">${savings.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {savingsGoal > 0
-                ? `${Math.min(((savings / savingsGoal) * 100), 100).toFixed(0)}% of $${savingsGoal.toFixed(2)} goal`
-                : "Set a goal in settings"}
-            </p>
-          </CardContent>
-        </Card>
+        {summaryCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card key={card.title} className="border" style={{ borderColor: 'var(--border-subtle)' }}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--fortress-steel)' }}>
+                  {card.title}
+                </CardTitle>
+                <div 
+                  className="p-1.5 rounded-md"
+                  style={{ backgroundColor: card.iconBg }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: card.iconColor }} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono" style={{ color: card.valueColor }}>
+                  {card.value}
+                </div>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  {card.sub}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
+      {/* ── Budget Progress + Recent Transactions ───────────────────────────── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Budget Progress Bars */}
-        <Card className="col-span-4">
-            <CardHeader>
-                <CardTitle>Budget Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-6">
+
+        {/* Budget Progress — Four-Tier System */}
+        <Card className="col-span-4 border" style={{ borderColor: 'var(--border-subtle)' }}>
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>
+              Budget Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {budgets.length === 0 ? (
+              <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>
+                No budgets configured yet.
+              </p>
+            ) : (
+              <div className="space-y-3">
                 {budgets.map((budget) => {
-                    const percentage = Math.min((budget.spent / budget.budgeted) * 100, 100);
-                    return (
-                    <div key={budget.id} className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
+                  const pct  = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const tier = getBudgetTier(budget.spent, budget.budgeted);
+                  const isCombat = budget.spent > budget.budgeted;
+
+                  return (
+                    <div
+                      key={budget.id}
+                      className={`rounded-md p-3 border transition-all ${tier.className}`}
+                      style={{
+                        backgroundColor: isCombat ? 'var(--engine-navy)' : 'var(--surface)',
+                        borderColor: isCombat ? 'transparent' : 'var(--border-subtle)',
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <div 
-                                className="w-3 h-3 rounded-full shadow-sm" 
-                                style={{ backgroundColor: budget.color }}
-                            />
-                            <span className="font-medium">{budget.category}</span>
+                          <div
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: isCombat ? '#FCA5A5' : budget.color }}
+                          />
+                          <span 
+                            className="text-sm font-semibold"
+                            style={{ color: isCombat ? '#FFFFFF' : 'var(--text-primary)' }}
+                          >
+                            {budget.category}
+                          </span>
                         </div>
-                        <span className="text-gray-500">
+                        <div className="flex items-center gap-3">
+                          <span 
+                            className="text-xs font-bold font-mono"
+                            style={{ color: isCombat ? '#CBD5E1' : 'var(--fortress-steel)' }}
+                          >
                             ${budget.spent.toFixed(0)} / ${budget.budgeted}
-                        </span>
-                        </div>
-                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full transition-all duration-500" 
+                          </span>
+                          <span 
+                            className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                             style={{ 
-                            width: `${percentage}%`,
-                            backgroundColor: budget.color 
-                            }} 
-                        />
+                              color: tier.labelColor,
+                              backgroundColor: isCombat ? 'rgba(255,255,255,0.08)' : 'transparent',
+                            }}
+                          >
+                            {tier.label}
+                          </span>
                         </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div 
+                        className="h-1.5 w-full rounded-full overflow-hidden"
+                        style={{ backgroundColor: isCombat ? 'rgba(255,255,255,0.12)' : 'var(--border-subtle)' }}
+                      >
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(pct, 100)}%`,
+                            backgroundColor: tier.barColor,
+                          }}
+                        />
+                      </div>
+
+                      {/* Over-budget callout */}
+                      {isCombat && (
+                        <p className="text-xs font-bold mt-1.5 font-mono" style={{ color: '#FCA5A5' }}>
+                          ▲ ${(budget.spent - budget.budgeted).toFixed(2)} over budget
+                        </p>
+                      )}
                     </div>
-                    );
+                  );
                 })}
-                {budgets.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">No budgets set yet.</p>
-                )}
-                </div>
-            </CardContent>
+              </div>
+            )}
+          </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <Card className="col-span-3">
-            <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Recent Transactions */}
+        <Card className="col-span-3 border" style={{ borderColor: 'var(--border-subtle)' }}>
+          <CardHeader>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             {recentTransactions.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No transactions yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No transactions yet.</p>
             ) : (
-                <div className="space-y-4">
-                {recentTransactions.map((transaction) => (
-                    <div
-                    key={transaction.id}
+              <div className="space-y-3">
+                {recentTransactions.map((t) => (
+                  <div
+                    key={t.id}
                     className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
-                    >
+                    style={{ borderColor: 'var(--border-subtle)' }}
+                  >
                     <div className="flex items-center gap-3">
-                        <div
-                        className={`p-2 rounded-full ${
-                            transaction.type === "income"
-                            ? "bg-green-100 text-[#00A86B]"
-                            : "bg-red-100 text-destructive"
-                        }`}
-                        >
-                        {transaction.type === "income" ? (
-                            <TrendingUp className="h-4 w-4" />
-                        ) : (
-                            <TrendingDown className="h-4 w-4" />
-                        )}
-                        </div>
-                        <div>
-                        <p className="font-medium">{transaction.description}</p>
-                        <p className="text-xs text-muted-foreground">
-                            {transaction.category} •{" "}
-                            {new Date(transaction.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            })}
+                      <div
+                        className="p-1.5 rounded-md"
+                        style={{
+                          backgroundColor: t.type === "income" ? "#DCFCE7" : "#FEE2E2",
+                        }}
+                      >
+                        {t.type === "income"
+                          ? <TrendingUp  className="h-3.5 w-3.5" style={{ color: 'var(--field-green)' }} />
+                          : <TrendingDown className="h-3.5 w-3.5" style={{ color: 'var(--castle-red)' }} />
+                        }
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
+                          {t.description}
                         </p>
-                        </div>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {t.category} &bull;{" "}
+                          {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </p>
+                      </div>
                     </div>
                     <p
-                        className={`font-medium ${
-                        transaction.type === "income"
-                            ? "text-[#00A86B]"
-                            : "text-destructive"
-                        }`}
+                      className="text-sm font-bold font-mono"
+                      style={{ color: t.type === "income" ? 'var(--field-green)' : 'var(--castle-red)' }}
                     >
-                        {transaction.type === "income" ? "+" : "-"}$
-                        {Math.abs(transaction.amount).toFixed(2)}
+                      {t.type === "income" ? "+" : "−"}${Math.abs(t.amount).toFixed(2)}
                     </p>
-                    </div>
+                  </div>
                 ))}
-                </div>
+              </div>
             )}
-            </CardContent>
+          </CardContent>
         </Card>
+
       </div>
     </div>
   );

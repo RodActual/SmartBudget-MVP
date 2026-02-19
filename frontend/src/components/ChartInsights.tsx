@@ -7,7 +7,6 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-  Legend,
   Tooltip,
   BarChart,
   Bar,
@@ -17,7 +16,8 @@ import {
   AreaChart,
   Area,
   ReferenceLine,
-  Label
+  Label,
+  Legend,
 } from "recharts";
 import { TrendingUp, TrendingDown, GitCompare, Calendar } from "lucide-react";
 import type { Budget, Transaction } from "../App";
@@ -28,233 +28,319 @@ interface ChartsInsightsProps {
   onUpdateBudgets: (budgets: Budget[]) => void;
 }
 
-// Simplified color resolver - budgets always store hex colors
-const resolveColor = (color: string) => {
-  return color || "#cbd5e1";
-};
+const resolveColor = (color: string) => color || "#CBD5E1";
 
-type TimeRange = '3m' | '6m' | '1y' | 'all';
+type TimeRange = "3m" | "6m" | "1y" | "all";
 
-export function ChartsInsights({
-  budgets,
-  transactions,
-  onUpdateBudgets,
-}: ChartsInsightsProps) {
-  const [chartMode, setChartMode] = useState<'growth' | 'spending' | 'comparison'>('comparison');
-  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: ChartsInsightsProps) {
+  const [chartMode, setChartMode] = useState<"growth" | "spending" | "comparison">("comparison");
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
 
-  // --- 1. DATA PREP: CATEGORY SPENDING (Bar & Pie) ---
-  const categoryData = useMemo(() => {
-    return budgets
-      .map((budget) => ({
-        name: budget.category,
-        value: budget.spent,
-        color: resolveColor(budget.color),
-        budget: budget.budgeted,
+  // ── 1. Category spending data ────────────────────────────────────────────
+  const categoryData = useMemo(() =>
+    budgets
+      .map((b) => ({
+        name: b.category,
+        value: b.spent,
+        color: resolveColor(b.color),
+        budget: b.budgeted,
       }))
-      .filter((item) => item.budget > 0 || item.value > 0);
-  }, [budgets]);
+      .filter((item) => item.budget > 0 || item.value > 0),
+    [budgets]
+  );
 
-  const pieChartData = categoryData.filter(item => item.value > 0);
+  const pieChartData = categoryData.filter((item) => item.value > 0);
 
-  // --- 2. DATA PREP: TRENDS WITH DRILL-DOWN FILTERING ---
+  // ── 2. Trend data with time-range filter ─────────────────────────────────
   const filteredTrendData = useMemo(() => {
-    const groupedData: Record<string, { date: string, sortKey: number, income: number, expense: number }> = {};
+    const grouped: Record<string, { date: string; sortKey: number; income: number; expense: number }> = {};
 
-    transactions.forEach(t => {
+    transactions.forEach((t) => {
       const d = new Date(t.date);
       if (isNaN(d.getTime())) return;
-
       const year = d.getFullYear();
-      const month = d.getMonth(); 
-      const sortKey = year * 100 + month;
+      const month = d.getMonth();
       const key = `${year}-${month}`;
-      const displayDate = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const displayDate = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
-      if (!groupedData[key]) {
-        groupedData[key] = { date: displayDate, sortKey, income: 0, expense: 0 };
-      }
-
-      if (t.type === 'income') {
-        groupedData[key].income += t.amount;
-      } else {
-        groupedData[key].expense += t.amount;
-      }
+      if (!grouped[key]) grouped[key] = { date: displayDate, sortKey: year * 100 + month, income: 0, expense: 0 };
+      if (t.type === "income") grouped[key].income += t.amount;
+      else grouped[key].expense += t.amount;
     });
 
-    const sortedData = Object.values(groupedData).sort((a, b) => a.sortKey - b.sortKey);
-
-    if (timeRange === 'all') return sortedData;
-    
-    const rangeMap: Record<TimeRange, number> = { '3m': 3, '6m': 6, '1y': 12, 'all': 999 };
-    return sortedData.slice(-rangeMap[timeRange]);
+    const sorted = Object.values(grouped).sort((a, b) => a.sortKey - b.sortKey);
+    if (timeRange === "all") return sorted;
+    const rangeMap: Record<TimeRange, number> = { "3m": 3, "6m": 6, "1y": 12, all: 999 };
+    return sorted.slice(-rangeMap[timeRange]);
   }, [transactions, timeRange]);
 
   const visibleAverages = useMemo(() => {
-    if (filteredTrendData.length === 0) return { income: 0, expense: 0 };
-    const totalIncome = filteredTrendData.reduce((sum, d) => sum + d.income, 0);
-    const totalExpense = filteredTrendData.reduce((sum, d) => sum + d.expense, 0);
+    if (!filteredTrendData.length) return { income: 0, expense: 0 };
+    const n = filteredTrendData.length;
     return {
-      income: totalIncome / filteredTrendData.length,
-      expense: totalExpense / filteredTrendData.length
+      income:  filteredTrendData.reduce((s, d) => s + d.income,  0) / n,
+      expense: filteredTrendData.reduce((s, d) => s + d.expense, 0) / n,
     };
   }, [filteredTrendData]);
 
-  // --- CUSTOM PIE LABEL RENDERER ---
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+  // ── Custom Pie label ─────────────────────────────────────────────────────
+  const renderPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+    if (percent < 0.04) return null;
     const RADIAN = Math.PI / 180;
-    const radius = outerRadius * 1.25; 
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    if (percent < 0.03) return null;
-
+    const r = outerRadius * 1.28;
+    const x = cx + r * Math.cos(-midAngle * RADIAN);
+    const y = cy + r * Math.sin(-midAngle * RADIAN);
     return (
-      <text 
-        x={x} y={y} 
-        fill="#64748b" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central" 
-        className="text-[10px] font-semibold"
+      <text
+        x={x} y={y}
+        textAnchor={x > cx ? "start" : "end"}
+        dominantBaseline="central"
+        style={{ fontSize: 10, fontWeight: 600, fill: "var(--fortress-steel)", fontFamily: "Inter, sans-serif" }}
       >
         {`${name} (${(percent * 100).toFixed(0)}%)`}
       </text>
     );
   };
 
-  // --- CUSTOM TOOLTIPS ---
+  // ── Custom Tooltips ──────────────────────────────────────────────────────
   const CategoryTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-3 rounded-lg border shadow-lg text-sm">
-          <div className="flex items-center gap-2 mb-1">
-             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }} />
-             <p className="font-medium text-slate-900">{data.name}</p>
-          </div>
-          <p className="text-slate-600">Spent: ${data.value.toFixed(2)}</p>
-          {data.budget > 0 && <p className="text-slate-400 text-xs">Budget: ${data.budget.toFixed(2)}</p>}
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload;
+    return (
+      <div
+        className="rounded-md border p-3 text-sm"
+        style={{
+          backgroundColor: "var(--surface)",
+          borderColor: "var(--border-subtle)",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+        }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
+          <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{d.name}</span>
         </div>
-      );
-    }
-    return null;
+        <p style={{ color: "var(--fortress-steel)" }}>
+          Spent: <span className="font-mono font-bold">${d.value.toFixed(2)}</span>
+        </p>
+        {d.budget > 0 && (
+          <p style={{ color: "var(--text-muted)" }}>
+            Budget: <span className="font-mono">${d.budget.toFixed(2)}</span>
+          </p>
+        )}
+      </div>
+    );
   };
 
   const TrendTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 rounded-lg border shadow-lg text-sm">
-          <p className="font-bold text-slate-900 mb-2">{label}</p>
-          {payload.map((entry: any) => (
-            <div key={entry.name} className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke || entry.fill }} />
-              <span className="capitalize text-slate-600">{entry.name}:</span>
-              <span className="font-medium" style={{ color: entry.stroke || entry.fill }}>
-                ${entry.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
+    if (!active || !payload?.length) return null;
+    return (
+      <div
+        className="rounded-md border p-3 text-sm"
+        style={{
+          backgroundColor: "var(--surface)",
+          borderColor: "var(--border-subtle)",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+        }}
+      >
+        <p className="font-bold mb-2" style={{ color: "var(--text-primary)" }}>{label}</p>
+        {payload.map((entry: any) => (
+          <div key={entry.name} className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke || entry.fill }} />
+            <span style={{ color: "var(--fortress-steel)" }} className="capitalize">{entry.name}:</span>
+            <span className="font-bold font-mono" style={{ color: entry.stroke || entry.fill }}>
+              ${entry.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
   };
+
+  // ── Chart mode button styles ─────────────────────────────────────────────
+  const modeButtons: { key: "growth" | "spending" | "comparison"; icon: typeof TrendingUp; label: string; activeColor: string }[] = [
+    { key: "growth",     icon: TrendingUp,  label: "Growth",  activeColor: "var(--field-green)"  },
+    { key: "spending",   icon: TrendingDown, label: "Spending", activeColor: "var(--castle-red)"  },
+    { key: "comparison", icon: GitCompare,  label: "Compare", activeColor: "var(--engine-navy)"  },
+  ];
 
   return (
     <div className="space-y-6">
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-3xl font-bold text-black tracking-tight">Charts & Insights</h1>
-        <p className="text-gray-600 mt-1">Analyze your spending patterns and financial trends.</p>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          Charts & Insights
+        </h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--fortress-steel)" }}>
+          Analyze your spending patterns and financial trends.
+        </p>
       </div>
 
-      <BudgetManager 
-        budgets={budgets} 
+      {/* ── Budget Manager ──────────────────────────────────────────────────── */}
+      <BudgetManager
+        budgets={budgets}
         onUpdateBudgets={onUpdateBudgets}
         transactions={transactions}
       />
 
+      {/* ── Pie + Bar Row ───────────────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="min-w-0">
+
+        {/* Spending by Category — Pie */}
+        <Card className="min-w-0 border" style={{ borderColor: "var(--border-subtle)" }}>
           <CardHeader>
-            <CardTitle>Spending by Category</CardTitle>
-            <CardDescription>Relative distribution of expenses</CardDescription>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
+              Spending by Category
+            </CardTitle>
+            <CardDescription style={{ color: "var(--fortress-steel)" }}>
+              Distribution of expenses this month
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div style={{ width: "100%", height: 350 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%" cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    paddingAngle={3}
-                    labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
-                    label={renderCustomizedLabel}
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={1} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CategoryTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            {pieChartData.length > 0 ? (
+              <div style={{ width: "100%", height: 340 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%" cy="50%"
+                      outerRadius={90}
+                      dataKey="value"
+                      paddingAngle={3}
+                      labelLine={{ stroke: "var(--border)", strokeWidth: 1 }}
+                      label={renderPieLabel}
+                    >
+                      {pieChartData.map((entry, i) => (
+                        <Cell key={`cell-${i}`} fill={entry.color} strokeWidth={1} stroke="var(--surface)" />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CategoryTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div
+                className="h-64 flex items-center justify-center rounded-md border-2 border-dashed text-sm"
+                style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+              >
+                No spending data for the current month.
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="min-w-0">
+        {/* Budget Adherence — Horizontal Bar */}
+        <Card className="min-w-0 border" style={{ borderColor: "var(--border-subtle)" }}>
           <CardHeader>
-            <CardTitle>Budget Adherence</CardTitle>
-            <CardDescription>Planned vs Actual comparison</CardDescription>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
+              Budget Adherence
+            </CardTitle>
+            <CardDescription style={{ color: "var(--fortress-steel)" }}>
+              Planned vs. actual — current month
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div style={{ width: "100%", height: 350 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <BarChart data={categoryData} layout="vertical" margin={{ left: 10, right: 30 }} barGap={4}>
-                  <defs>
-                    <pattern id="pattern-stripe" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                      <rect x="0" y="0" width="8" height="8" fill="#f1f5f9" /> 
-                      <line x1="0" y1="0" x2="0" y2="8" stroke="#cbd5e1" strokeWidth="2" />
-                    </pattern>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11, fill: '#64748b'}} />
-                  <Tooltip content={<CategoryTooltip />} cursor={{fill: '#f8fafc'}} />
-                  <Legend iconType="rect" />
-                  <Bar dataKey="budget" name="Budget" fill="url(#pattern-stripe)" radius={[0, 4, 4, 0]} barSize={12} />
-                  <Bar dataKey="value" name="Spent" radius={[0, 4, 4, 0]} barSize={12}>
-                    {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {categoryData.length > 0 ? (
+              <div style={{ width: "100%", height: 340 }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <BarChart
+                    data={categoryData}
+                    layout="vertical"
+                    margin={{ left: 10, right: 40, top: 4, bottom: 4 }}
+                    barGap={4}
+                  >
+                    <defs>
+                      <pattern
+                        id="fortis-stripe"
+                        x="0" y="0" width="8" height="8"
+                        patternUnits="userSpaceOnUse"
+                        patternTransform="rotate(45)"
+                      >
+                        <rect x="0" y="0" width="8" height="8" fill="#F1F5F9" />
+                        <line x1="0" y1="0" x2="0" y2="8" stroke="#CBD5E1" strokeWidth="2" />
+                      </pattern>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-subtle)" />
+                    <XAxis
+                      type="number"
+                      hide
+                      tick={{ fontSize: 11, fill: "var(--fortress-steel)" }}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={82}
+                      tick={{ fontSize: 11, fill: "var(--fortress-steel)", fontFamily: "Inter, sans-serif" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<CategoryTooltip />} cursor={{ fill: "var(--surface-raised)" }} />
+                    <Legend
+                      iconType="rect"
+                      wrapperStyle={{ fontSize: 11, color: "var(--fortress-steel)" }}
+                    />
+                    <Bar
+                      dataKey="budget"
+                      name="Budget"
+                      fill="url(#fortis-stripe)"
+                      radius={[0, 4, 4, 0]}
+                      barSize={10}
+                    />
+                    <Bar
+                      dataKey="value"
+                      name="Spent"
+                      radius={[0, 4, 4, 0]}
+                      barSize={10}
+                    >
+                      {categoryData.map((entry, i) => (
+                        <Cell key={`cell-${i}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div
+                className="h-64 flex items-center justify-center rounded-md border-2 border-dashed text-sm"
+                style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+              >
+                No data available.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      {/* ── Financial Trends ────────────────────────────────────────────────── */}
+      <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
         <CardHeader>
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-            <div className="text-center lg:text-left">
-              <CardTitle>Financial Trends</CardTitle>
-              <CardDescription>Performance tracking against visible range averages</CardDescription>
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
+                Financial Trends
+              </CardTitle>
+              <CardDescription style={{ color: "var(--fortress-steel)" }}>
+                Performance tracking vs. range averages
+              </CardDescription>
             </div>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              {/* Range Selector */}
-              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200 shadow-sm">
-                <Calendar className="w-3 h-3 ml-2 mr-1 text-slate-400" />
-                {(['3m', '6m', '1y', 'all'] as TimeRange[]).map((range) => (
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              {/* Time Range Selector */}
+              <div
+                className="flex items-center gap-1 p-1 rounded-md border"
+                style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+              >
+                <Calendar className="w-3 h-3 ml-1.5 mr-0.5" style={{ color: "var(--text-muted)" }} />
+                {(["3m", "6m", "1y", "all"] as TimeRange[]).map((range) => (
                   <button
                     key={range}
                     onClick={() => setTimeRange(range)}
-                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all ${
-                      timeRange === range 
-                      ? 'bg-white text-black shadow-sm border border-slate-200' 
-                      : 'text-slate-500 hover:text-black'
-                    }`}
+                    className="px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all"
+                    style={{
+                      backgroundColor: timeRange === range ? "var(--surface)" : "transparent",
+                      color: timeRange === range ? "var(--engine-navy)" : "var(--fortress-steel)",
+                      boxShadow: timeRange === range ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                      border: timeRange === range ? "1px solid var(--border-subtle)" : "1px solid transparent",
+                    }}
                   >
                     {range}
                   </button>
@@ -262,134 +348,128 @@ export function ChartsInsights({
               </div>
 
               {/* Chart Mode Selector */}
-<div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => setChartMode('growth')}
-    style={{
-      backgroundColor: chartMode === 'growth' ? '#16a34a' : 'transparent',
-      color: chartMode === 'growth' ? '#ffffff' : '#475569',
-    }}
-    className="text-xs h-8 px-4 transition-all"
-  >
-    <TrendingUp className="w-3 h-3 mr-1" /> Growth
-  </Button>
-  
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => setChartMode('spending')}
-    style={{
-      backgroundColor: chartMode === 'spending' ? '#dc2626' : 'transparent',
-      color: chartMode === 'spending' ? '#ffffff' : '#475569',
-    }}
-    className="text-xs h-8 px-4 transition-all"
-  >
-    <TrendingDown className="w-3 h-3 mr-1" /> Spending
-  </Button>
-
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => setChartMode('comparison')}
-    style={{
-      backgroundColor: chartMode === 'comparison' ? '#2563eb' : 'transparent',
-      color: chartMode === 'comparison' ? '#ffffff' : '#475569',
-    }}
-    className="text-xs h-8 px-4 transition-all"
-  >
-    <GitCompare className="w-3 h-3 mr-1" /> Compare
-  </Button>
+              <div
+                className="flex p-1 rounded-md border"
+                style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+              >
+                {modeButtons.map(({ key, icon: Icon, label, activeColor }) => (
+                  <button
+                    key={key}
+                    onClick={() => setChartMode(key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide transition-all"
+                    style={{
+                      backgroundColor: chartMode === key ? activeColor : "transparent",
+                      color: chartMode === key ? "#FFFFFF" : "var(--fortress-steel)",
+                    }}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {filteredTrendData.length > 0 ? (
-            <div style={{ width: "100%", height: 400, marginTop: "1rem" }}>
+            <div style={{ width: "100%", height: 380, marginTop: "0.5rem" }}>
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <AreaChart data={filteredTrendData} margin={{ top: 20, right: 60, left: 10, bottom: 0 }}>
+                <AreaChart
+                  data={filteredTrendData}
+                  margin={{ top: 20, right: 64, left: 8, bottom: 0 }}
+                >
                   <defs>
-                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#16a34a" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#16a34a" stopOpacity={0}/>
+                    <linearGradient id="grad-income" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#166534" stopOpacity={0.12} />
+                      <stop offset="95%" stopColor="#166534" stopOpacity={0} />
                     </linearGradient>
-                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#dc2626" stopOpacity={0}/>
+                    <linearGradient id="grad-expense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#8B1219" stopOpacity={0.12} />
+                      <stop offset="95%" stopColor="#8B1219" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{fontSize: 11, fill: '#64748b'}} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    dy={10} 
+
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: "var(--fortress-steel)", fontFamily: "Inter, sans-serif" }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={8}
                   />
-                  <YAxis 
-                    tick={{fontSize: 11, fill: '#64748b'}} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tickFormatter={(v) => `$${v}`} 
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "var(--fortress-steel)", fontFamily: "Inter, sans-serif" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${v}`}
                   />
                   <Tooltip content={<TrendTooltip />} />
-                  <Legend verticalAlign="top" height={40} iconType="circle" />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 11, color: "var(--fortress-steel)" }}
+                  />
 
-                  {/* Dynamic Reference Lines */}
-                  {(chartMode === 'growth' || chartMode === 'comparison') && (
-                    <ReferenceLine y={visibleAverages.income} stroke="#16a34a" strokeDasharray="4 4">
-                      <Label 
-                        value={`Avg: $${visibleAverages.income.toFixed(0)}`} 
-                        position="right" 
-                        fill="#16a34a" 
-                        fontSize={10} 
-                        fontWeight="bold" 
+                  {/* Average reference lines */}
+                  {(chartMode === "growth" || chartMode === "comparison") && (
+                    <ReferenceLine y={visibleAverages.income} stroke="#166534" strokeDasharray="4 4" strokeOpacity={0.7}>
+                      <Label
+                        value={`Avg $${visibleAverages.income.toFixed(0)}`}
+                        position="right"
+                        fill="#166534"
+                        fontSize={10}
+                        fontWeight={700}
                       />
                     </ReferenceLine>
                   )}
-                  {(chartMode === 'spending' || chartMode === 'comparison') && (
-                    <ReferenceLine y={visibleAverages.expense} stroke="#dc2626" strokeDasharray="4 4">
-                      <Label 
-                        value={`Avg: $${visibleAverages.expense.toFixed(0)}`} 
-                        position="right" 
-                        fill="#dc2626" 
-                        fontSize={10} 
-                        fontWeight="bold" 
+                  {(chartMode === "spending" || chartMode === "comparison") && (
+                    <ReferenceLine y={visibleAverages.expense} stroke="#8B1219" strokeDasharray="4 4" strokeOpacity={0.7}>
+                      <Label
+                        value={`Avg $${visibleAverages.expense.toFixed(0)}`}
+                        position="right"
+                        fill="#8B1219"
+                        fontSize={10}
+                        fontWeight={700}
                       />
                     </ReferenceLine>
                   )}
 
-                  {(chartMode === 'growth' || chartMode === 'comparison') && (
-                    <Area 
-                      type="monotone" 
-                      dataKey="income" 
-                      name="Income" 
-                      stroke="#16a34a" 
-                      fillOpacity={1} 
-                      fill="url(#colorIncome)" 
-                      strokeWidth={3} 
+                  {(chartMode === "growth" || chartMode === "comparison") && (
+                    <Area
+                      type="monotone"
+                      dataKey="income"
+                      name="Income"
+                      stroke="#166534"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#grad-income)"
+                      dot={false}
+                      activeDot={{ r: 4, fill: "#166534", stroke: "var(--surface)", strokeWidth: 2 }}
                     />
                   )}
-                  {(chartMode === 'spending' || chartMode === 'comparison') && (
-                    <Area 
-                      type="monotone" 
-                      dataKey="expense" 
-                      name="Expenses" 
-                      stroke="#dc2626" 
-                      fillOpacity={1} 
-                      fill="url(#colorExpense)" 
-                      strokeWidth={3} 
+                  {(chartMode === "spending" || chartMode === "comparison") && (
+                    <Area
+                      type="monotone"
+                      dataKey="expense"
+                      name="Expenses"
+                      stroke="#8B1219"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#grad-expense)"
+                      dot={false}
+                      activeDot={{ r: 4, fill: "#8B1219", stroke: "var(--surface)", strokeWidth: 2 }}
                     />
                   )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-400 bg-slate-50 rounded-lg border border-dashed text-sm">
+            <div
+              className="h-72 flex items-center justify-center rounded-md border-2 border-dashed text-sm"
+              style={{ borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "var(--surface-raised)" }}
+            >
               Insufficient data history for this range.
             </div>
           )}

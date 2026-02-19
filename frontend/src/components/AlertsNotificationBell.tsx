@@ -33,8 +33,7 @@ export interface AlertSettings {
   largeTransactionEnabled: boolean;
   largeTransactionAmount: number;
   weeklyReportEnabled: boolean;
-  // PERSISTENT: List of dismissed alert IDs
-  dismissedAlertIds: string[]; 
+  dismissedAlertIds: string[];
 }
 
 interface AlertItem {
@@ -46,54 +45,69 @@ interface AlertItem {
   timestamp: number;
 }
 
+// ── Alert tier → Fortis color tokens ──────────────────────────────────────────
+const alertStyles: Record<string, { bg: string; border: string; text: string; iconColor: string }> = {
+  danger: {
+    bg:        "#FEF2F2",
+    border:    "var(--castle-red)",
+    text:      "#7F1D1D",
+    iconColor: "var(--castle-red)",
+  },
+  warning: {
+    bg:        "#FFFBEB",
+    border:    "var(--safety-amber)",
+    text:      "#78350F",
+    iconColor: "var(--safety-amber)",
+  },
+  info: {
+    bg:        "#EFF6FF",
+    border:    "#3B82F6",
+    text:      "#1E3A5F",
+    iconColor: "#3B82F6",
+  },
+  success: {
+    bg:        "#F0FDF4",
+    border:    "var(--field-green)",
+    text:      "#14532D",
+    iconColor: "var(--field-green)",
+  },
+};
+
 export function AlertsNotificationBell({
   budgets,
   transactions,
   alertSettings,
   onUpdateAlertSettings,
 }: AlertsNotificationBellProps) {
-  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [popoverOpen, setPopoverOpen]         = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [tempSettings, setTempSettings] = useState<AlertSettings>(alertSettings);
-  const [viewedAlerts, setViewedAlerts] = useState<Set<string>>(new Set());
+  const [tempSettings, setTempSettings]       = useState<AlertSettings>(alertSettings);
+  const [viewedAlerts, setViewedAlerts]       = useState<Set<string>>(new Set());
 
-  // Set for quick lookup of persistent dismissed alerts
   const dismissedAlertsSet = new Set(alertSettings.dismissedAlertIds || []);
 
-  // Stable function to update persistent settings
   const updateDismissedAlerts = useCallback((newDismissedIds: string[]) => {
-    onUpdateAlertSettings({
-        ...alertSettings,
-        dismissedAlertIds: newDismissedIds,
-    });
+    onUpdateAlertSettings({ ...alertSettings, dismissedAlertIds: newDismissedIds });
   }, [alertSettings, onUpdateAlertSettings]);
 
-  // Calculate spending for each budget
   const getBudgetWithSpending = (budget: Budget) => {
     const spent = transactions
       .filter(t => t.type === "expense" && t.category.toLowerCase() === budget.category.toLowerCase())
       .reduce((sum, t) => sum + t.amount, 0);
-    
     return { ...budget, spent };
   };
 
   const budgetsWithSpending = budgets.map(getBudgetWithSpending);
 
-  // Generate alerts based on settings
   const generateAlerts = (): AlertItem[] => {
     const alerts: AlertItem[] = [];
 
-    // FIX: Added index as fallback and used budget.id for uniqueness
     budgetsWithSpending.forEach((budget, index) => {
       const percentage = (budget.spent / budget.budgeted) * 100;
-      
-      // Use Firestore ID if available, otherwise combine category and index to ensure uniqueness
-      const uniqueId = budget.id || `${budget.category}-${index}`;
-      
-      const alertId = `budget-exceeded-${uniqueId}`;
-      const warningId = `budget-warning-${uniqueId}`;
+      const uniqueId   = budget.id || `${budget.category}-${index}`;
+      const alertId    = `budget-exceeded-${uniqueId}`;
+      const warningId  = `budget-warning-${uniqueId}`;
 
-      // Budget exceeded alert: FILTERED by dismissedAlertsSet
       if (alertSettings.budgetExceededEnabled && budget.spent > budget.budgeted && !dismissedAlertsSet.has(alertId)) {
         alerts.push({
           id: alertId,
@@ -103,9 +117,7 @@ export function AlertsNotificationBell({
           icon: AlertCircle,
           timestamp: Date.now(),
         });
-      }
-      // Budget warning alert: FILTERED by dismissedAlertsSet
-      else if (alertSettings.budgetWarningEnabled && percentage >= alertSettings.budgetWarningThreshold && percentage < 100 && !dismissedAlertsSet.has(warningId)) {
+      } else if (alertSettings.budgetWarningEnabled && percentage >= alertSettings.budgetWarningThreshold && percentage < 100 && !dismissedAlertsSet.has(warningId)) {
         alerts.push({
           id: warningId,
           type: "warning",
@@ -117,32 +129,26 @@ export function AlertsNotificationBell({
       }
     });
 
-    // Large transaction alerts
     if (alertSettings.largeTransactionEnabled) {
-      const recentLargeTransactions = transactions
+      transactions
         .filter(t => t.type === "expense" && t.amount >= alertSettings.largeTransactionAmount)
-        .slice(0, 3);
-
-      recentLargeTransactions.forEach((transaction) => {
-        const alertId = `large-transaction-${transaction.id}`;
-        // FILTERED by dismissedAlertsSet
-        if (!dismissedAlertsSet.has(alertId)) {
-          alerts.push({
-            id: alertId,
-            type: "info",
-            title: "Large Transaction",
-            description: `$${transaction.amount.toFixed(2)} spent on ${transaction.description}`,
-            icon: Info,
-            timestamp: new Date(transaction.date).getTime(),
-          });
-        }
-      });
+        .slice(0, 3)
+        .forEach((transaction) => {
+          const alertId = `large-transaction-${transaction.id}`;
+          if (!dismissedAlertsSet.has(alertId)) {
+            alerts.push({
+              id: alertId,
+              type: "info",
+              title: "Large Transaction",
+              description: `$${transaction.amount.toFixed(2)} spent on ${transaction.description}`,
+              icon: Info,
+              timestamp: new Date(transaction.date).getTime(),
+            });
+          }
+        });
     }
 
-    // If there are no currently active, non-dismissed alerts, show "All Clear"
-    const hasActiveAlerts = alerts.length > 0;
-
-    if (!hasActiveAlerts) {
+    if (alerts.length === 0) {
       alerts.push({
         id: "all-clear",
         type: "success",
@@ -156,69 +162,35 @@ export function AlertsNotificationBell({
     return alerts;
   };
 
-  const alerts = generateAlerts();
-  const unviewedAlerts = alerts.filter(a => a.type !== "success" && !viewedAlerts.has(a.id));
-  const alertCount = unviewedAlerts.length;
+  const alerts      = generateAlerts();
+  const unviewed    = alerts.filter(a => a.type !== "success" && !viewedAlerts.has(a.id));
+  const alertCount  = unviewed.length;
 
-  // Mark all alerts as viewed when popover opens
   useEffect(() => {
     if (popoverOpen) {
-      let needsUpdate = false;
-      const newViewedAlerts = new Set(viewedAlerts);
-      
-      alerts.forEach(alert => {
-        if (alert.type !== "success" && !viewedAlerts.has(alert.id)) {
-          newViewedAlerts.add(alert.id);
-          needsUpdate = true;
-        }
+      let changed = false;
+      const next  = new Set(viewedAlerts);
+      alerts.forEach(a => {
+        if (a.type !== "success" && !viewedAlerts.has(a.id)) { next.add(a.id); changed = true; }
       });
-
-      // ONLY CALL setViewedAlerts IF a change was actually made
-      if (needsUpdate) {
-        setViewedAlerts(newViewedAlerts);
-      }
+      if (changed) setViewedAlerts(next);
     }
   }, [popoverOpen, alerts, viewedAlerts]);
 
-  const getAlertClassName = (type: string) => {
-    switch (type) {
-      case "danger":
-        return "border-red-500 bg-red-50 text-red-900";
-      case "warning":
-        return "border-amber-500 bg-amber-50 text-amber-900";
-      case "info":
-        return "border-blue-500 bg-blue-50 text-blue-900";
-      case "success":
-        return "border-green-500 bg-green-50 text-green-900";
-      default:
-        return "border-gray-300 bg-gray-50 text-gray-900";
-    }
-  };
-
-  // Update handler to persist the dismissed alert ID
   const handleDismissAlert = (alertId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const newDismissed = new Set(dismissedAlertsSet).add(alertId);
-    updateDismissedAlerts(Array.from(newDismissed));
+    const next = new Set(dismissedAlertsSet).add(alertId);
+    updateDismissedAlerts(Array.from(next));
   };
 
-  // Update handler to persist clearing all alerts
   const handleClearAllAlerts = () => {
-    const allAlertIdsToDismiss = alerts
-        .filter(a => a.type !== "success")
-        .map(a => a.id);
-    
-    // Merge new dismissals with old ones
-    const mergedDismissed = new Set([...dismissedAlertsSet, ...allAlertIdsToDismiss]);
-    updateDismissedAlerts(Array.from(mergedDismissed));
+    const ids     = alerts.filter(a => a.type !== "success").map(a => a.id);
+    const merged  = new Set([...dismissedAlertsSet, ...ids]);
+    updateDismissedAlerts(Array.from(merged));
   };
 
   const handleSaveSettings = () => {
-    // Preserve the dismissedAlertIds when saving other settings
-    onUpdateAlertSettings({
-        ...tempSettings,
-        dismissedAlertIds: alertSettings.dismissedAlertIds, 
-    });
+    onUpdateAlertSettings({ ...tempSettings, dismissedAlertIds: alertSettings.dismissedAlertIds });
     setSettingsDialogOpen(false);
   };
 
@@ -230,28 +202,49 @@ export function AlertsNotificationBell({
 
   return (
     <>
+      {/* ── Bell trigger ────────────────────────────────────────────────────── */}
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            style={{ color: "var(--fortress-steel)" }}
+          >
             <Bell className="h-5 w-5" />
             {alertCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              <span
+                className="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
+                style={{ backgroundColor: "var(--castle-red)" }}
+              >
                 {alertCount > 9 ? "9+" : alertCount}
               </span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96" align="end">
+
+        <PopoverContent
+          className="w-96"
+          align="end"
+          style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+        >
           <div className="space-y-4">
+            {/* Header */}
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">Notifications</h3>
-              <div className="flex items-center gap-2">
+              <h3
+                className="font-bold text-base uppercase tracking-widest"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Notifications
+              </h3>
+              <div className="flex items-center gap-1">
                 {alerts.filter(a => a.type !== "success").length > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleClearAllAlerts}
-                    className="text-xs"
+                    className="text-xs font-bold uppercase tracking-wide"
+                    style={{ color: "var(--fortress-steel)" }}
                   >
                     Clear All
                   </Button>
@@ -260,34 +253,46 @@ export function AlertsNotificationBell({
                   variant="ghost"
                   size="sm"
                   onClick={handleOpenSettings}
-                  className="gap-2"
+                  style={{ color: "var(--fortress-steel)" }}
                 >
                   <SettingsIcon className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {/* Alert list */}
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-0.5">
               {alerts.map((alert) => {
-                const Icon = alert.icon;
+                const Icon      = alert.icon;
                 const isDismissed = dismissedAlertsSet.has(alert.id);
-                const isSuccess = alert.type === "success";
+                const isSuccess   = alert.type === "success";
+                const s           = alertStyles[alert.type] || alertStyles.info;
 
                 return (
-                  <Alert 
-                        key={alert.id} 
-                        className={`${getAlertClassName(alert.type)} relative pr-8 ${isDismissed && !isSuccess ? 'opacity-50 line-through' : ''}`}
-                    >
-                    <Icon className="h-4 w-4" />
-                    <AlertTitle>{alert.title}</AlertTitle>
-                    <AlertDescription>{alert.description}</AlertDescription>
-                    {alert.type !== "success" && !isDismissed && (
+                  <Alert
+                    key={alert.id}
+                    className={`relative pr-8 rounded-md border-l-4 ${isDismissed && !isSuccess ? "opacity-40 line-through" : ""}`}
+                    style={{
+                      backgroundColor: s.bg,
+                      borderColor:     s.border,
+                      color:           s.text,
+                    }}
+                  >
+                    <Icon className="h-4 w-4" style={{ color: s.iconColor }} />
+                    <AlertTitle className="font-bold text-xs uppercase tracking-wide" style={{ color: s.text }}>
+                      {alert.title}
+                    </AlertTitle>
+                    <AlertDescription className="text-xs mt-0.5" style={{ color: s.text, opacity: 0.85 }}>
+                      {alert.description}
+                    </AlertDescription>
+                    {!isSuccess && !isDismissed && (
                       <button
                         onClick={(e) => handleDismissAlert(alert.id, e)}
-                        className="absolute top-2 right-2 p-1 hover:bg-black/10 rounded-full transition-colors"
-                        aria-label="Dismiss alert"
+                        className="absolute top-2 right-2 p-1 rounded-full transition-colors"
+                        style={{ color: s.iconColor }}
+                        aria-label="Dismiss"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </Alert>
@@ -298,154 +303,154 @@ export function AlertsNotificationBell({
         </PopoverContent>
       </Popover>
 
-      {/* Alert Settings Dialog */}
+      {/* ── Alert Settings Dialog ────────────────────────────────────────────── */}
       <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent
+          className="max-w-2xl"
+          style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+        >
           <DialogHeader>
-            <DialogTitle>Alert Settings</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+              Alert Settings
+            </DialogTitle>
+            <DialogDescription style={{ color: "var(--fortress-steel)" }}>
               Configure when you want to be notified about your spending
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto pr-2">
-            {/* Alert Types */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-black">Alert Types</h4>
+          <div className="space-y-5 py-4 max-h-[60vh] overflow-y-auto pr-2">
 
-              {/* Budget Warning */}
-              <div className="flex items-start justify-between border-b pb-4 gap-4">
-                <div className="space-y-2 flex-1">
-                  <Label htmlFor="budget-warning" className="text-base">
-                    Budget Warning
-                  </Label>
-                  <p className="text-sm text-gray-600">
-                    Get notified when spending reaches a threshold
-                  </p>
-                  {tempSettings.budgetWarningEnabled && (
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="warning-threshold" className="text-sm">
-                          Warning threshold
-                        </Label>
-                        <span className="text-sm font-semibold">{tempSettings.budgetWarningThreshold}%</span>
-                      </div>
+            {/* Section heading */}
+            <h4 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--fortress-steel)" }}>
+              Alert Types
+            </h4>
+
+            {/* Budget Warning */}
+            <div className="flex items-start justify-between border-b pb-4 gap-4" style={{ borderColor: "var(--border-subtle)" }}>
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="budget-warning" className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Budget Warning
+                </Label>
+                <p className="text-xs" style={{ color: "var(--fortress-steel)" }}>
+                  Alert when spending reaches a percentage threshold
+                </p>
+                {tempSettings.budgetWarningEnabled && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="warning-threshold" className="text-xs" style={{ color: "var(--fortress-steel)" }}>
+                        Threshold
+                      </Label>
+                      <span className="text-xs font-bold font-mono" style={{ color: "var(--safety-amber)" }}>
+                        {tempSettings.budgetWarningThreshold}%
+                      </span>
+                    </div>
+                    <input
+                      id="warning-threshold"
+                      type="range"
+                      min="50" max="95" step="5"
+                      value={tempSettings.budgetWarningThreshold}
+                      onChange={(e) => setTempSettings({ ...tempSettings, budgetWarningThreshold: parseInt(e.target.value) })}
+                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                      style={{ accentColor: "var(--castle-red)" }}
+                    />
+                  </div>
+                )}
+              </div>
+              <Switch
+                id="budget-warning"
+                checked={tempSettings.budgetWarningEnabled}
+                onCheckedChange={(c) => setTempSettings({ ...tempSettings, budgetWarningEnabled: c })}
+              />
+            </div>
+
+            {/* Budget Exceeded */}
+            <div className="flex items-start justify-between border-b pb-4 gap-4" style={{ borderColor: "var(--border-subtle)" }}>
+              <div className="space-y-1">
+                <Label htmlFor="budget-exceeded" className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Budget Exceeded
+                </Label>
+                <p className="text-xs" style={{ color: "var(--fortress-steel)" }}>
+                  Alert when any category goes over its budget
+                </p>
+              </div>
+              <Switch
+                id="budget-exceeded"
+                checked={tempSettings.budgetExceededEnabled}
+                onCheckedChange={(c) => setTempSettings({ ...tempSettings, budgetExceededEnabled: c })}
+              />
+            </div>
+
+            {/* Large Transaction */}
+            <div className="flex items-start justify-between border-b pb-4 gap-4" style={{ borderColor: "var(--border-subtle)" }}>
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="large-transaction" className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Large Transactions
+                </Label>
+                <p className="text-xs" style={{ color: "var(--fortress-steel)" }}>
+                  Alert on single expenses above a threshold
+                </p>
+                {tempSettings.largeTransactionEnabled && (
+                  <div className="mt-3">
+                    <Label htmlFor="transaction-amount" className="text-xs" style={{ color: "var(--fortress-steel)" }}>
+                      Amount threshold
+                    </Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm font-bold font-mono" style={{ color: "var(--fortress-steel)" }}>$</span>
                       <input
-                        id="warning-threshold"
-                        type="range"
-                        min="50"
-                        max="95"
-                        step="5"
-                        value={tempSettings.budgetWarningThreshold}
-                        onChange={(e) =>
-                          setTempSettings({
-                            ...tempSettings,
-                            budgetWarningThreshold: parseInt(e.target.value),
-                          })
-                        }
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                        id="transaction-amount"
+                        type="number"
+                        step="50" min="100"
+                        value={tempSettings.largeTransactionAmount}
+                        onChange={(e) => setTempSettings({ ...tempSettings, largeTransactionAmount: parseInt(e.target.value) || 100 })}
+                        className="flex-1 rounded-md px-3 py-1.5 text-sm font-mono border"
+                        style={{
+                          backgroundColor: "var(--surface-raised)",
+                          borderColor: "var(--border-subtle)",
+                          color: "var(--text-primary)",
+                        }}
                       />
                     </div>
-                  )}
-                </div>
-                <Switch
-                  id="budget-warning"
-                  checked={tempSettings.budgetWarningEnabled}
-                  onCheckedChange={(checked) =>
-                    setTempSettings({ ...tempSettings, budgetWarningEnabled: checked })
-                  }
-                />
+                  </div>
+                )}
               </div>
+              <Switch
+                id="large-transaction"
+                checked={tempSettings.largeTransactionEnabled}
+                onCheckedChange={(c) => setTempSettings({ ...tempSettings, largeTransactionEnabled: c })}
+              />
+            </div>
 
-              {/* Budget Exceeded */}
-              <div className="flex items-start justify-between border-b pb-4 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="budget-exceeded" className="text-base">
-                    Budget Exceeded
-                  </Label>
-                  <p className="text-sm text-gray-600">
-                    Alert when you exceed your budget in any category
-                  </p>
-                </div>
-                <Switch
-                  id="budget-exceeded"
-                  checked={tempSettings.budgetExceededEnabled}
-                  onCheckedChange={(checked) =>
-                    setTempSettings({ ...tempSettings, budgetExceededEnabled: checked })
-                  }
-                />
+            {/* Weekly Report */}
+            <div className="flex items-start justify-between pb-4 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="weekly-report" className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Weekly Summary Report
+                </Label>
+                <p className="text-xs" style={{ color: "var(--fortress-steel)" }}>
+                  Receive a weekly spending digest (coming soon)
+                </p>
               </div>
-
-              {/* Large Transaction */}
-              <div className="flex items-start justify-between border-b pb-4 gap-4">
-                <div className="space-y-2 flex-1">
-                  <Label htmlFor="large-transaction" className="text-base">
-                    Large Transactions
-                  </Label>
-                  <p className="text-sm text-gray-600">
-                    Get notified about transactions over a certain amount
-                  </p>
-                  {tempSettings.largeTransactionEnabled && (
-                    <div className="mt-3">
-                      <Label htmlFor="transaction-amount" className="text-sm">
-                        Amount threshold
-                      </Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm">$</span>
-                        <input
-                          id="transaction-amount"
-                          type="number"
-                          step="50"
-                          min="100"
-                          value={tempSettings.largeTransactionAmount}
-                          onChange={(e) =>
-                            setTempSettings({
-                              ...tempSettings,
-                              largeTransactionAmount: parseInt(e.target.value) || 100,
-                            })
-                          }
-                          className="flex-1 border rounded px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <Switch
-                  id="large-transaction"
-                  checked={tempSettings.largeTransactionEnabled}
-                  onCheckedChange={(checked) =>
-                    setTempSettings({ ...tempSettings, largeTransactionEnabled: checked })
-                  }
-                />
-              </div>
-
-              {/* Weekly Report */}
-              <div className="flex items-start justify-between pb-4 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="weekly-report" className="text-base">
-                    Weekly Summary Report
-                  </Label>
-                  <p className="text-sm text-gray-600">
-                    Receive a weekly summary of your spending (coming soon)
-                  </p>
-                </div>
-                <Switch
-                  id="weekly-report"
-                  checked={tempSettings.weeklyReportEnabled}
-                  onCheckedChange={(checked) =>
-                    setTempSettings({ ...tempSettings, weeklyReportEnabled: checked })
-                  }
-                  disabled
-                />
-              </div>
+              <Switch id="weekly-report" checked={tempSettings.weeklyReportEnabled} disabled
+                onCheckedChange={(c) => setTempSettings({ ...tempSettings, weeklyReportEnabled: c })}
+              />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsDialogOpen(false)}>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSettingsDialogOpen(false)}
+              style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveSettings}>Save Settings</Button>
+            <Button
+              onClick={handleSaveSettings}
+              className="font-bold text-white"
+              style={{ backgroundColor: "var(--castle-red)", border: "none", boxShadow: "0 2px 0 0 var(--castle-red-dark)" }}
+            >
+              Save Settings
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

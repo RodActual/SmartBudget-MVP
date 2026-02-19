@@ -75,8 +75,6 @@ export default function App() {
   const [userName, setUserName] = useState("User");
   const [savingsGoal, setSavingsGoal] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  
-  // FIX 1: Default to FALSE. We assume they need setup until Firestore tells us otherwise.
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
@@ -107,10 +105,8 @@ export default function App() {
   // --- 4. AUTH EFFECTS ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      // Don't set user immediately, wait until we verify everything
       if (currentUser) {
         try {
-          // FIX 2: Force token refresh to ensure emailVerified is current
           await currentUser.reload();
           setUser(currentUser); 
           setShowVerificationBanner(!currentUser.emailVerified);
@@ -123,25 +119,20 @@ export default function App() {
             setUserName(data.userName || "User");
             setSavingsGoal(data.savingsGoal || 0);
             setNotificationsEnabled(data.notificationsEnabled ?? true);
-            
-            // FIX 3: Explicit check. If field is missing/undefined/false, this becomes FALSE.
             setIsSetupComplete(data.isSetupComplete === true);
-            
             if (data.alertSettings) setAlertSettings(data.alertSettings);
           } else {
-            // FIX 4: New User (Doc missing) -> Force Setup
             setIsSetupComplete(false);
           }
         } catch (error) {
           console.error("Error loading settings:", error);
-          // Safety fallback
           setIsSetupComplete(false);
         }
       } else {
         setUser(null);
         setIsSetupComplete(false);
       }
-      setAuthLoading(false); // Only stop loading after all logic is done
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -172,12 +163,10 @@ export default function App() {
     setSavingsGoal(0);
     setActiveTab("dashboard");
     setAuthMode('landing');
-    setIsSetupComplete(false); // Reset on logout
+    setIsSetupComplete(false);
   };
 
-  const handleLegalBack = () => {
-    setAuthMode('landing');
-  };
+  const handleLegalBack = () => setAuthMode('landing');
 
   const handleUpdatePassword = async (current: string, newPass: string) => {
     if (!user) return { success: false, error: "No user" };
@@ -210,7 +199,7 @@ export default function App() {
     }
   };
 
-  // --- 7. ARCHIVE HANDLERS (Issue #5) ---
+  // --- 7. ARCHIVE HANDLERS ---
   const handleUpdateTransactionForArchive = async (id: string, updates: Partial<Transaction>) => {
     if (!user) return;
     try {
@@ -236,7 +225,14 @@ export default function App() {
   };
 
   // --- 8. RENDERING ---
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center text-xl">Loading...</div>;
+  if (authLoading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--castle-red)', borderTopColor: 'transparent' }} />
+        <p className="text-sm font-medium" style={{ color: 'var(--fortress-steel)' }}>Loading FortisBudget...</p>
+      </div>
+    </div>
+  );
 
   // Global Legal Overlays
   if (authMode === 'privacy') return <PrivacyPolicy onBack={handleLegalBack} />;
@@ -245,11 +241,16 @@ export default function App() {
   if (!user) {
     if (authMode === 'login' || authMode === 'signup') {
       return (
-        <div className="relative min-h-screen bg-white">
+        <div className="relative min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
           <div className="absolute top-4 left-4 z-10">
-             <Button variant="ghost" onClick={() => setAuthMode('landing')} className="text-gray-600 hover:text-black">
-               <ArrowLeft className="mr-2 h-4 w-4" /> Back
-             </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => setAuthMode('landing')} 
+              style={{ color: 'var(--fortress-steel)' }}
+              className="hover:bg-slate-100"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
           </div>
           <LoginForm onLogin={() => {}} initialIsSignUp={authMode === 'signup'} />
         </div>
@@ -268,58 +269,120 @@ export default function App() {
 
   return (
     <GlobalErrorBoundary>
-      <div className="min-h-screen bg-white relative">
+      <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="container mx-auto p-4 sm:p-6 space-y-6">
           
-          {/* Fortis Header */}
-          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl shadow-sm p-4 overflow-hidden">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-[#001D3D] px-4 py-2.5 rounded-lg">
-                <FortisLogo className="h-8 w-8" />
-                <h1 className="text-xl font-bold tracking-tight text-black uppercase">
+          {/* ================================================================
+              FORTIS HEADER — Engine Navy structural bar
+              ================================================================ */}
+          <header 
+            className="flex items-center justify-between rounded-lg px-4 py-3 overflow-hidden"
+            style={{ 
+              backgroundColor: 'var(--engine-navy)',
+              boxShadow: '0 2px 8px rgba(27, 38, 59, 0.4)',
+            }}
+          >
+            {/* Left: Brand */}
+            <div className="flex items-center gap-3">
+              <FortisLogo className="h-8 w-8" />
+              <div>
+                <h1 className="text-base font-bold tracking-widest uppercase text-white">
                   FortisBudget
                 </h1>
+                <p className="hidden lg:block text-[9px] font-medium uppercase tracking-[0.25em]" style={{ color: '#64748B' }}>
+                  Financial Strength Through Intentionality
+                </p>
               </div>
-              <p className="hidden lg:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                Financial Strength Through Intentionality
-              </p>
             </div>
 
+            {/* Right: Actions */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500 font-medium hidden sm:inline">{user?.email}</span>
-              <AlertsNotificationBell 
-                budgets={currentBudgets} transactions={transactions} 
-                alertSettings={alertSettings} onUpdateAlertSettings={setAlertSettings} 
-              />
-              <Button onClick={handleLogout} variant="destructive" size="sm" className="shadow-sm">
-                <LogOut className="h-4 w-4" /> <span className="hidden sm:inline ml-2">Logout</span>
+              {/* Email display */}
+              <span 
+                className="text-xs font-medium hidden sm:inline px-2 py-1 rounded"
+                style={{ color: '#94A3B8', backgroundColor: 'rgba(255,255,255,0.06)' }}
+              >
+                {user?.email}
+              </span>
+
+              {/* Notification bell */}
+              <div className="text-white">
+                <AlertsNotificationBell 
+                  budgets={currentBudgets} 
+                  transactions={transactions} 
+                  alertSettings={alertSettings} 
+                  onUpdateAlertSettings={setAlertSettings} 
+                />
+              </div>
+
+              {/* Logout */}
+              <Button 
+                onClick={handleLogout} 
+                size="sm"
+                className="text-white border font-semibold tracking-wide"
+                style={{ 
+                  backgroundColor: 'var(--castle-red)',
+                  borderColor: 'var(--castle-red-dark)',
+                  boxShadow: '0 2px 0 0 var(--castle-red-dark)',
+                }}
+              >
+                <LogOut className="h-4 w-4" /> 
+                <span className="hidden sm:inline ml-1">Logout</span>
               </Button>
             </div>
-          </div>
+          </header>
 
           {/* Verification Banner */}
           {showVerificationBanner && (
-            <EmailVerification onVerified={async () => { setShowVerificationBanner(false); window.location.reload(); }} />
+            <EmailVerification 
+              onVerified={async () => { 
+                setShowVerificationBanner(false); 
+                window.location.reload(); 
+              }} 
+            />
           )}
 
-          {/* Main Content Gate */}
+          {/* ================================================================
+              MAIN CONTENT GATE
+              ================================================================ */}
           {user?.emailVerified ? (
             !isSetupComplete ? (
-               <WelcomeSetup 
-                 userId={user.uid} 
-                 onComplete={() => { 
-                   setIsSetupComplete(true); 
-                 }} 
-               />
+              <WelcomeSetup 
+                userId={user.uid} 
+                onComplete={() => setIsSetupComplete(true)} 
+              />
             ) : (
               <>
+                {/* ============================================================
+                    NAVIGATION TABS
+                    ============================================================ */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-5 bg-slate-100 h-auto sm:h-10 p-1 border border-slate-200">
-                    <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="h-4 w-4"/><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
-                    <TabsTrigger value="expenses" className="gap-2"><Receipt className="h-4 w-4"/><span className="hidden sm:inline">Expenses</span></TabsTrigger>
-                    <TabsTrigger value="insights" className="gap-2"><BarChart3 className="h-4 w-4"/><span className="hidden sm:inline">Insights</span></TabsTrigger>
-                    <TabsTrigger value="learn" className="gap-2"><BookOpen className="h-4 w-4"/><span className="hidden sm:inline">Learn</span></TabsTrigger>
-                    <TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4"/><span className="hidden sm:inline">Settings</span></TabsTrigger>
+                  <TabsList 
+                    className="grid w-full grid-cols-5 h-auto sm:h-10 p-1 rounded-lg border"
+                    style={{ 
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--border-subtle)',
+                    }}
+                  >
+                    {[
+                      { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                      { value: 'expenses',  icon: Receipt,         label: 'Expenses'  },
+                      { value: 'insights',  icon: BarChart3,       label: 'Insights'  },
+                      { value: 'learn',     icon: BookOpen,        label: 'Learn'     },
+                      { value: 'settings',  icon: Settings,        label: 'Settings'  },
+                    ].map(({ value, icon: Icon, label }) => (
+                      <TabsTrigger 
+                        key={value}
+                        value={value} 
+                        className="gap-1.5 text-xs font-semibold uppercase tracking-wide rounded-md transition-all"
+                        style={{
+                          color: activeTab === value ? 'var(--engine-navy)' : 'var(--fortress-steel)',
+                        }}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="hidden sm:inline">{label}</span>
+                      </TabsTrigger>
+                    ))}
                   </TabsList>
 
                   <TabsContent value="dashboard" className="mt-6">
@@ -347,7 +410,11 @@ export default function App() {
                   
                   <TabsContent value="insights" className="mt-6">
                     <ErrorBoundary name="Charts & Insights">
-                      <ChartsInsights budgets={currentBudgets} transactions={transactions} onUpdateBudgets={updateBudgets} />
+                      <ChartsInsights 
+                        budgets={currentBudgets} 
+                        transactions={transactions} 
+                        onUpdateBudgets={updateBudgets} 
+                      />
                     </ErrorBoundary>
                   </TabsContent>
                   
@@ -371,34 +438,79 @@ export default function App() {
                 </Tabs>
 
                 {/* Internal Legal Footer */}
-                <div className="flex justify-center gap-6 mt-8 pb-8 text-[10px] text-slate-400 uppercase tracking-widest">
-                  <button onClick={() => setAuthMode('privacy')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
-                  <button onClick={() => setAuthMode('terms')} className="hover:text-blue-600 transition-colors">Terms of Service</button>
+                <footer 
+                  className="flex justify-center gap-6 mt-8 pb-8 text-[10px] uppercase tracking-widest font-mono"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <button 
+                    onClick={() => setAuthMode('privacy')} 
+                    className="hover:underline transition-colors"
+                    style={{ color: 'inherit' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--castle-red)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                  >
+                    Privacy Policy
+                  </button>
+                  <button 
+                    onClick={() => setAuthMode('terms')} 
+                    className="hover:underline transition-colors"
+                    style={{ color: 'inherit' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--castle-red)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                  >
+                    Terms of Service
+                  </button>
                   <span>&copy; 2026 FortisBudget</span>
-                </div>
+                </footer>
 
                 <AddTransactionDialog 
-                  open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if(!open) setEditingTransaction(null); }}
+                  open={dialogOpen} 
+                  onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingTransaction(null); }}
                   onAddTransaction={(t) => { addTransaction(t); setDialogOpen(false); }}
-                  onEditTransaction={(t) => { if(editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
+                  onEditTransaction={(t) => { if (editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
                   editingTransaction={editingTransaction}
                   budgets={budgets}
                 />
               </>
             )
           ) : (
-            <div className="text-center py-20 border-2 border-dashed border-slate-200 rounded-xl mt-6 bg-slate-50">
-              <h2 className="text-2xl font-bold text-slate-800">Email Verification Required</h2>
-              <p className="text-slate-500 mt-2 max-w-sm mx-auto">To protect your financial data, please verify your email address using the banner at the top of the page.</p>
+            /* Email not verified gate */
+            <div 
+              className="text-center py-20 border-2 border-dashed rounded-lg mt-6"
+              style={{ 
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--surface)',
+              }}
+            >
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                Email Verification Required
+              </h2>
+              <p className="mt-2 max-w-sm mx-auto text-sm" style={{ color: 'var(--fortress-steel)' }}>
+                To protect your financial data, please verify your email address using the banner above.
+              </p>
             </div>
           )}
 
+          {/* Inactivity Warning Dialog */}
           <AlertDialog open={showWarning} onOpenChange={() => {}}>
             <AlertDialogContent>
-              <AlertDialogHeader><AlertDialogTitle>Are you still there?</AlertDialogTitle><AlertDialogDescription>You'll be logged out in 2 minutes.</AlertDialogDescription></AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogAction onClick={continueSession}>Continue</AlertDialogAction></AlertDialogFooter>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you still there?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You'll be logged out in 2 minutes due to inactivity.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogAction 
+                  onClick={continueSession}
+                  style={{ backgroundColor: 'var(--engine-navy)' }}
+                >
+                  Continue Session
+                </AlertDialogAction>
+              </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
         </div>
       </div>
     </GlobalErrorBoundary>
