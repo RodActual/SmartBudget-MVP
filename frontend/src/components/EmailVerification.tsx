@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { auth } from "../firebase";
-import { sendEmailVerification, reload } from "firebase/auth";
+import { sendEmailVerification, reload, applyActionCode } from "firebase/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
@@ -20,6 +20,40 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
 
   const user = auth.currentUser;
 
+  // ── 1. Handle incoming verification link (oobCode) ──────────────────────
+  useEffect(() => {
+    const processVerification = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const oobCode = params.get("oobCode");
+      const mode = params.get("mode");
+
+      // If we have a code and we're in verify mode, apply it
+      if (oobCode && mode === "verifyEmail") {
+        setChecking(true);
+        try {
+          await applyActionCode(auth, oobCode);
+          setSuccess("Email verified successfully! Redirecting...");
+          
+          // Force a reload of the user object to update emailVerified status
+          if (user) await reload(user);
+          
+          // Clean up the URL and notify the app
+          setTimeout(() => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            if (onVerified) onVerified();
+          }, 2000);
+        } catch (err: any) {
+          setError("The verification link is invalid or has expired.");
+        } finally {
+          setChecking(false);
+        }
+      }
+    };
+
+    processVerification();
+  }, [user, onVerified]);
+
+  // ── 2. Standard Cooldown & Logic ────────────────────────────────────────
   useEffect(() => {
     if (cooldown > 0) {
       const t = setTimeout(() => setCooldown(c => c - 1), 1000);
@@ -35,11 +69,10 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     if (!user) { setError("No user logged in"); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      // NOTE: Ensure your Firebase Console -> Auth -> Settings -> Authorized Domains 
-      // includes your production URL for this redirect to work.
+      // url: window.location.origin + "/verify" ensures they land back here
       await sendEmailVerification(user, { 
-        url: window.location.origin, 
-        handleCodeInApp: false 
+        url: `${window.location.origin}/verify`, 
+        handleCodeInApp: true 
       });
       setEmailSent(true);
       setSuccess("Verification email sent! Please check your inbox.");
@@ -65,7 +98,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
         setSuccess("Email verified successfully!");
         if (onVerified) setTimeout(() => onVerified(), 1500);
       } else {
-        setError("Email not verified yet. Please check your inbox and click the verification link.");
+        setError("Email not verified yet. Please check your inbox and click the link.");
       }
     } catch (err: any) {
       setError("Failed to check verification status");
@@ -105,11 +138,11 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
             className="text-sm font-bold uppercase tracking-widest"
             style={{ color: "var(--text-primary)" }}
           >
-            Verify Your Email
+            {checking ? "Verifying..." : "Verify Your Email"}
           </CardTitle>
         </div>
         <CardDescription style={{ color: "var(--fortress-steel)" }}>
-          Please verify your email address to access all features
+          {checking ? "Please wait while we confirm your code." : "Please verify your email address to access all features"}
         </CardDescription>
       </CardHeader>
 
@@ -120,9 +153,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
         >
           <p className="text-sm font-semibold" style={{ color: "#78350F" }}>
             Email: <span className="font-mono">{user.email}</span>
-          </p>
-          <p className="text-xs mt-1.5" style={{ color: "#92400E" }}>
-            A verification link will be sent to this address. Click the link to verify your account.
           </p>
         </div>
 
@@ -151,7 +181,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={handleSendVerification}
-            disabled={loading || cooldown > 0}
+            disabled={loading || checking || cooldown > 0}
             className="flex-1 font-bold text-white"
             style={{
               backgroundColor: "var(--castle-red)",
@@ -159,18 +189,11 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
               boxShadow: "0 2px 0 0 var(--castle-red-dark)",
             }}
           >
-            {loading ? (
-              <><RefreshCw className="h-4 w-4 animate-spin mr-2" /> Sending…</>
-            ) : cooldown > 0 ? (
-              `Resend in ${cooldown}s`
-            ) : emailSent ? (
-              "Resend Verification Email"
-            ) : (
-              "Send Verification Email"
-            )}
+            {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+            {cooldown > 0 ? `Resend in ${cooldown}s` : "Send Verification Email"}
           </Button>
 
-          {emailSent && (
+          {emailSent && !checking && (
             <Button
               onClick={handleCheckVerification}
               disabled={checking}
@@ -178,21 +201,9 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
               className="flex-1 font-bold gap-2"
               style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
             >
-              {checking
-                ? <><RefreshCw className="h-4 w-4 animate-spin" /> Checking…</>
-                : <><CheckCircle className="h-4 w-4" /> I've Verified My Email</>
-              }
+              <CheckCircle className="h-4 w-4" /> I've Verified My Email
             </Button>
           )}
-        </div>
-
-        <div className="text-xs space-y-1" style={{ color: "var(--text-muted)" }}>
-          <p className="font-bold uppercase tracking-wide" style={{ color: "var(--fortress-steel)" }}>Tips:</p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>Check your spam/junk folder if you don't see the email</li>
-            <li>The verification link expires after 1 hour</li>
-            <li>You can resend the email if it doesn't arrive</li>
-          </ul>
         </div>
       </CardContent>
     </Card>
