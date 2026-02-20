@@ -69,7 +69,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     if (!user) { setError("No user logged in"); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      // url: window.location.origin + "/verify" ensures they land back here
+      // Ensure Authorized Domains includes fortisbudget.com
       await sendEmailVerification(user, { 
         url: `${window.location.origin}/verify`, 
         handleCodeInApp: true 
@@ -109,26 +109,38 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
 
   if (!user) return null;
 
+  // ── 3. Render: Success State ───────────────────────────────────────────
   if (user.emailVerified) {
     return (
-      <Alert
-        className="border rounded-md"
-        style={{ backgroundColor: "#F0FDF4", borderColor: "var(--field-green)" }}
-      >
-        <CheckCircle className="h-4 w-4" style={{ color: "var(--field-green)" }} />
-        <AlertTitle className="font-bold text-xs uppercase tracking-wide" style={{ color: "#14532D" }}>
-          Email Verified
-        </AlertTitle>
-        <AlertDescription className="text-xs" style={{ color: "#14532D" }}>
-          Your email has been verified. You have full access to FortisBudget.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4 w-full max-w-md mx-auto">
+        <Alert
+          className="border rounded-md"
+          style={{ backgroundColor: "#F0FDF4", borderColor: "var(--field-green)" }}
+        >
+          <CheckCircle className="h-4 w-4" style={{ color: "var(--field-green)" }} />
+          <AlertTitle className="font-bold text-xs uppercase tracking-wide" style={{ color: "#14532D" }}>
+            Email Verified
+          </AlertTitle>
+          <AlertDescription className="text-xs" style={{ color: "#14532D" }}>
+            Your email has been verified. You now have full access to FortisBudget.
+          </AlertDescription>
+        </Alert>
+        
+        <Button 
+          className="w-full font-bold text-white shadow-md hover:-translate-y-0.5 transition-transform"
+          onClick={() => window.location.href = "/"}
+          style={{ backgroundColor: "var(--engine-navy)" }}
+        >
+          Go to Dashboard
+        </Button>
+      </div>
     );
   }
 
+  // ── 4. Render: Verification Pending ────────────────────────────────────
   return (
     <Card
-      className="border-2"
+      className="border-2 shadow-lg"
       style={{ borderColor: "var(--safety-amber)", backgroundColor: "var(--surface)" }}
     >
       <CardHeader>

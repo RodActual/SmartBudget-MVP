@@ -12,9 +12,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import type { Budget, Transaction } from "../App";
 import { useUserSettings } from "../hooks/useUserSettings";
-import { auth, db } from "../firebase";
-import { deleteUser, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import { collection, query, where, getDocs, writeBatch, doc } from "firebase/firestore";
 import { FORTIS_VERSION, GIT_HASH, LAST_DEPLOYED } from "../version";
 
 interface SettingsPageProps {
@@ -23,9 +20,11 @@ interface SettingsPageProps {
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
   onNavigate: (mode: "privacy" | "terms") => void;
+  // --- Props added to match App.tsx handlers ---
+  onUpdatePassword: (current: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+  onDeleteAccount: (pass: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-// ── Shared input style ─────────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
   backgroundColor: "var(--surface-raised)",
   borderColor:     "var(--border-subtle)",
@@ -45,6 +44,8 @@ export function SettingsPage({
   onUpdateTransaction,
   onDeleteTransaction,
   onNavigate,
+  onUpdatePassword,
+  onDeleteAccount,
 }: SettingsPageProps) {
   const { userName, savingsGoal, updateUserName, updateSavingsGoal } = useUserSettings();
 
@@ -90,44 +91,33 @@ export function SettingsPage({
     }
   };
 
-  const handleUpdatePassword = async () => {
+  const handlePasswordUpdate = async () => {
     setPasswordError("");
     setPasswordSuccess("");
-    const user = auth.currentUser;
-    if (!user) { setPasswordError("No user logged in"); return; }
     if (!currentPassword || !newPassword || !confirmPassword) { setPasswordError("Please fill in all fields"); return; }
     if (newPassword.length < 6) { setPasswordError("New password must be at least 6 characters"); return; }
     if (newPassword !== confirmPassword) { setPasswordError("New passwords do not match"); return; }
+    
     setIsUpdatingPassword(true);
-    try {
-      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email!, currentPassword));
-      await updatePassword(user, newPassword);
+    const result = await onUpdatePassword(currentPassword, newPassword);
+    
+    if (result.success) {
       setPasswordSuccess("Password updated successfully.");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       setTimeout(() => setPasswordSuccess(""), 3000);
-    } catch (err: any) {
-      setPasswordError(err.message || "Failed to update password");
-    } finally {
-      setIsUpdatingPassword(false);
+    } else {
+      setPasswordError(result.error || "Failed to update password");
     }
+    setIsUpdatingPassword(false);
   };
 
-  const handleDeleteAccount = async () => {
+  const handleAccountDeletion = async () => {
     setDeleteError("");
-    const user = auth.currentUser;
-    if (!user) { setDeleteError("No user logged in"); return; }
     if (!deletePassword) { setDeleteError("Please enter your password to confirm"); return; }
-    try {
-      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email!, deletePassword));
-      const uid = user.uid;
-      const batch = writeBatch(db);
-      (await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)))).docs.forEach(d => batch.delete(d.ref));
-      (await getDocs(query(collection(db, "budgets"),      where("userId", "==", uid)))).docs.forEach(d => batch.delete(d.ref));
-      batch.delete(doc(db, "userSettings", uid));
-      await batch.commit();
-      await deleteUser(user);
-    } catch (err: any) {
-      setDeleteError(err.message || "Failed to delete account");
+    
+    const result = await onDeleteAccount(deletePassword);
+    if (!result.success) {
+      setDeleteError(result.error || "Failed to delete account");
     }
   };
 
@@ -138,8 +128,6 @@ export function SettingsPage({
 
   return (
     <div className="space-y-6 pb-12">
-
-      {/* ── Header ────────────────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Settings</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--fortress-steel)" }}>
@@ -148,8 +136,6 @@ export function SettingsPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-
-        {/* ── Personal Settings ────────────────────────────────────────────────── */}
         <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
@@ -207,7 +193,6 @@ export function SettingsPage({
           </CardContent>
         </Card>
 
-        {/* ── Security ─────────────────────────────────────────────────────────── */}
         <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
           <CardHeader>
             <CardTitle
@@ -229,7 +214,7 @@ export function SettingsPage({
             {passwordSuccess && <p className="text-xs font-semibold" style={{ color: "var(--field-green)" }}>{passwordSuccess}</p>}
 
             <Button
-              onClick={handleUpdatePassword}
+              onClick={handlePasswordUpdate}
               variant="outline"
               className="w-full font-bold"
               disabled={isUpdatingPassword}
@@ -241,7 +226,6 @@ export function SettingsPage({
         </Card>
       </div>
 
-      {/* ── Archived Transactions ─────────────────────────────────────────────── */}
       {archivedTransactions.length > 0 && (
         <Card className="border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface-raised)" }}>
           <CardHeader>
@@ -318,7 +302,6 @@ export function SettingsPage({
               </Table>
             </div>
 
-            {/* Bulk actions */}
             <div className="flex flex-col sm:flex-row gap-3 pt-1">
               <Button
                 variant="outline"
@@ -365,7 +348,6 @@ export function SettingsPage({
         </Card>
       )}
 
-      {/* ── Legal ─────────────────────────────────────────────────────────────── */}
       <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
         <CardHeader>
           <CardTitle
@@ -406,7 +388,6 @@ export function SettingsPage({
         </CardContent>
       </Card>
 
-      {/* ── Danger Zone ───────────────────────────────────────────────────────── */}
       <Card
         className="border"
         style={{ borderColor: "var(--castle-red)", backgroundColor: "#FEF2F2" }}
@@ -453,7 +434,7 @@ export function SettingsPage({
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={handleDeleteAccount}
+                  onClick={handleAccountDeletion}
                   className="font-bold text-white"
                   style={{ backgroundColor: "var(--castle-red)", border: "none" }}
                 >

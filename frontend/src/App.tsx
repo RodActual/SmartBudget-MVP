@@ -234,10 +234,22 @@ export default function App() {
     </div>
   );
 
+  const isVerifyRoute = window.location.pathname === "/verify";
+
   if (authMode === "privacy") return <PrivacyPolicy onBack={handleLegalBack} />;
   if (authMode === "terms") return <TermsOfService onBack={handleLegalBack} />;
 
   if (!user) {
+    if (isVerifyRoute) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "var(--bg)" }}>
+          <div className="w-full max-w-md">
+            <EmailVerification onVerified={() => setAuthMode("login")} />
+          </div>
+        </div>
+      );
+    }
+
     if (authMode === "login" || authMode === "signup") {
       return (
         <div className="relative min-h-screen" style={{ backgroundColor: "var(--bg)" }}>
@@ -323,7 +335,7 @@ export default function App() {
             </div>
           </header>
 
-          {showVerificationBanner && (
+          {(showVerificationBanner || isVerifyRoute) && (
             <EmailVerification 
               onVerified={async () => { 
                 setShowVerificationBanner(false); 
@@ -416,6 +428,8 @@ export default function App() {
                         onUpdateTransaction={handleUpdateTransactionForArchive}
                         onDeleteTransaction={handleDeleteTransactionPermanently}
                         onNavigate={setAuthMode}
+                        onUpdatePassword={handleUpdatePassword}
+                        onDeleteAccount={handleDeleteAccount}
                       />
                     </ErrorBoundary>
                   </TabsContent>
@@ -425,18 +439,10 @@ export default function App() {
                   className="flex justify-center gap-6 mt-8 pb-8 text-[10px] uppercase tracking-widest font-mono"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  <button 
-                    onClick={() => setAuthMode("privacy")} 
-                    className="hover:underline transition-colors"
-                    style={{ color: "inherit" }}
-                  >
+                  <button onClick={() => setAuthMode("privacy")} className="hover:underline transition-colors">
                     Privacy Policy
                   </button>
-                  <button 
-                    onClick={() => setAuthMode("terms")} 
-                    className="hover:underline transition-colors"
-                    style={{ color: "inherit" }}
-                  >
+                  <button onClick={() => setAuthMode("terms")} className="hover:underline transition-colors">
                     Terms of Service
                   </button>
                   <span>&copy; 2026 FortisBudget</span>
