@@ -5,9 +5,9 @@ createUserWithEmailAndPassword,
 GoogleAuthProvider,
 signInWithPopup,
 sendEmailVerification,
-} from “firebase/auth”;
+} from "firebase/auth";
 import { auth, db } from “../firebase”;
-import { doc, setDoc, getDoc } from “firebase/firestore”;
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Button } from “../ui/button”;
 import { Input } from “../ui/input”;
 import { Label } from “../ui/label”;
