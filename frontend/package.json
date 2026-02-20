@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://RodActual.github.io/FortisBudget",
+  
   "scripts": {
     "dev": "vite",
     "build": "node update-version.cjs && vite build",
