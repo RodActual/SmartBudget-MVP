@@ -1,15 +1,15 @@
 import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Plus, Edit2, Trash2, Search } from "lucide-react";
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "../ui/table";
 import type { Transaction, Budget } from "../App";
 import { getTodayStart, getStartOfDay, getDaysAgo, isDateBefore } from "../utils/dateUtils";
 
 interface ExpenseTrackingProps {
   transactions: Transaction[];
-  budgets: Budget[]; 
+  budgets: Budget[];
   onOpenAddTransaction: () => void;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
@@ -27,181 +27,256 @@ export function ExpenseTracking({
   const [searchTerm, setSearchTerm] = useState("");
 
   const { visibleTransactions, oldTransactions, dateRange } = useMemo(() => {
-      const todayStart = getTodayStart();
-      const ninetyDaysAgo = getDaysAgo(90);
-      
-      // 1. Logic: Identify Old Candidates (Older than 90 days & Not Archived)
-      const old = transactions.filter(t => {
-        if (t.archived) return false;
-        const tDate = getStartOfDay(t.date);
-        return isDateBefore(tDate, ninetyDaysAgo);
-      });
+    const todayStart    = getTodayStart();
+    const ninetyDaysAgo = getDaysAgo(90);
 
-      // 2. Logic: Filter Visible (Last 90 days OR Newer & Not Archived)
-      const visible = transactions.filter(t => {
-        if (t.archived) return false;
-        
-        const tDate = getStartOfDay(t.date);
-        const isRecent = !isDateBefore(tDate, ninetyDaysAgo);
-        if (!isRecent) return false;
+    const old = transactions.filter(t => {
+      if (t.archived) return false;
+      return isDateBefore(getStartOfDay(t.date), ninetyDaysAgo);
+    });
 
-        const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = 
-            t.description.toLowerCase().includes(searchLower) ||
-            t.category.toLowerCase().includes(searchLower) ||
-            t.amount.toString().includes(searchLower);
+    const visible = transactions.filter(t => {
+      if (t.archived) return false;
+      if (isDateBefore(getStartOfDay(t.date), ninetyDaysAgo)) return false;
+      const q = searchTerm.toLowerCase();
+      return (
+        t.description.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q) ||
+        t.amount.toString().includes(q)
+      );
+    });
 
-        return matchesSearch;
-      });
+    visible.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      visible.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const fmt = (d: Date) =>
+      d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 
-      const formatDate = (d: Date) => d.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
-
-      return {
-          visibleTransactions: visible,
-          oldTransactions: old,
-          dateRange: `${formatDate(ninetyDaysAgo)} - ${formatDate(todayStart)}`
-      };
+    return {
+      visibleTransactions: visible,
+      oldTransactions: old,
+      dateRange: `${fmt(ninetyDaysAgo)} — ${fmt(todayStart)}`,
+    };
   }, [transactions, searchTerm]);
 
   const handleArchiveClick = async () => {
     if (oldTransactions.length === 0) return;
-    
-    // Improved confirmation message with clear explanation
-    const message = `Archive ${oldTransactions.length} transaction${oldTransactions.length === 1 ? '' : 's'} older than 90 days?
-
-✓ Hidden from your main transaction list
-✓ Still counted in charts and analytics  
-✓ Accessible in Settings → Archived Transactions
-
-You can restore or permanently delete them later.`;
-
-    if (window.confirm(message)) {
-        try {
-          // Use the updated handler to archive each transaction
-          await Promise.all(oldTransactions.map(t => onUpdateTransaction(t.id, { archived: true })));
-          alert(`Successfully archived ${oldTransactions.length} transaction${oldTransactions.length === 1 ? '' : 's'}.`);
-        } catch (error) {
-          console.error("Archive failed:", error);
-          alert("An error occurred while archiving.");
-        }
+    const n = oldTransactions.length;
+    const msg = `Archive ${n} transaction${n === 1 ? "" : "s"} older than 90 days?\n\n✓ Hidden from main list\n✓ Still counted in charts\n✓ Accessible in Settings → Archived`;
+    if (!window.confirm(msg)) return;
+    try {
+      await Promise.all(oldTransactions.map(t => onUpdateTransaction(t.id, { archived: true })));
+      alert(`Archived ${n} transaction${n === 1 ? "" : "s"}.`);
+    } catch (err) {
+      console.error("Archive failed:", err);
+      alert("An error occurred while archiving.");
     }
   };
 
-  const getCategoryColor = (categoryName: string) => {
-    const budget = budgets.find(b => b.category === categoryName);
-    return budget ? budget.color : "#9ca3af"; 
-  };
+  const getCategoryColor = (cat: string) =>
+    budgets.find(b => b.category === cat)?.color ?? "#9CA3AF";
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#001D3D]">Expense Tracking</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Active view: <span className="font-semibold text-slate-700">{dateRange}</span>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+            Expense Tracking
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--fortress-steel)" }}>
+            Active view:{" "}
+            <span className="font-semibold font-mono" style={{ color: "var(--text-primary)" }}>
+              {dateRange}
+            </span>
           </p>
         </div>
-        
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-             {oldTransactions.length > 0 && (
-                <Button variant="outline" onClick={handleArchiveClick} size="sm" className="whitespace-nowrap border-slate-200 text-slate-600">
-                    Archive {oldTransactions.length} Old
-                </Button>
-             )}
 
-            <Button onClick={onOpenAddTransaction} className="bg-blue-600 hover:bg-blue-700 shadow-sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Transaction
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          {oldTransactions.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleArchiveClick}
+              size="sm"
+              className="whitespace-nowrap font-bold uppercase tracking-wide text-xs"
+              style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+            >
+              Archive {oldTransactions.length} Old
             </Button>
+          )}
+          <Button
+            onClick={onOpenAddTransaction}
+            size="sm"
+            className="font-bold text-white gap-1.5"
+            style={{
+              backgroundColor: "var(--castle-red)",
+              border: "none",
+              boxShadow: "0 2px 0 0 var(--castle-red-dark)",
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Add Transaction
+          </Button>
         </div>
       </div>
 
-      {/* SEARCH BAR - Isolated Prefix Design */}
+      {/* ── Search ──────────────────────────────────────────────────────────── */}
       <div className="max-w-md">
-        <div className="group flex items-center w-full rounded-md border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all overflow-hidden">
-          
-          {/* Isolated Icon Container */}
-          <div className="flex items-center justify-center w-10 h-10 bg-slate-50 border-r border-slate-200 text-slate-400 group-focus-within:text-blue-500 group-focus-within:bg-blue-50/30">
+        <div
+          className="group flex items-center w-full rounded-md overflow-hidden border transition-all"
+          style={{
+            backgroundColor: "var(--surface)",
+            borderColor: "var(--border-subtle)",
+          }}
+        >
+          {/* Icon prefix cell */}
+          <div
+            className="flex items-center justify-center w-10 h-10 border-r flex-shrink-0 transition-colors"
+            style={{
+              backgroundColor: "var(--surface-raised)",
+              borderColor: "var(--border-subtle)",
+              color: "var(--text-muted)",
+            }}
+          >
             <Search className="h-4 w-4" />
           </div>
-
           <input
             type="text"
-            placeholder="Search transactions..."
+            placeholder="Search transactions…"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 h-10 px-3 bg-transparent text-sm outline-none placeholder:text-slate-400"
+            onChange={e => setSearchTerm(e.target.value)}
+            className="flex-1 h-10 px-3 bg-transparent text-sm outline-none"
+            style={{
+              color: "var(--text-primary)",
+            }}
           />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      {/* ── Table ───────────────────────────────────────────────────────────── */}
+      <div
+        className="rounded-md border overflow-hidden"
+        style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}
+      >
         <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/50 hover:bg-transparent">
-                <TableHead className="font-semibold text-slate-900">Date</TableHead>
-                <TableHead className="font-semibold text-slate-900">Description</TableHead>
-                <TableHead className="font-semibold text-slate-900">Category</TableHead>
-                <TableHead className="text-right font-semibold text-slate-900">Amount</TableHead>
-                <TableHead className="text-right font-semibold text-slate-900">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleTransactions.length > 0 ? (
-                visibleTransactions.map((transaction) => (
-                  <TableRow key={transaction.id} className="hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="text-sm text-slate-600 whitespace-nowrap">
-                      {new Date(transaction.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate font-medium text-slate-900" title={transaction.description}>
-                        {transaction.description}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div 
-                            className="w-2.5 h-2.5 rounded-full ring-1 ring-black/5" 
-                            style={{ backgroundColor: getCategoryColor(transaction.category) }} 
-                        />
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                            {transaction.category}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className={`text-right font-bold tabular-nums ${
-                      transaction.type === 'income' ? 'text-emerald-600' : 'text-slate-900'
-                    }`}>
-                      {transaction.type === 'income' ? '+' : ''}
-                      ${transaction.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={() => onEdit(transaction)}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => onDelete(transaction.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                        <Search className="h-10 w-10 text-slate-200" />
-                        <p className="font-medium">No transactions found</p>
-                        <p className="text-xs">Adjust your search or check your archived data.</p>
+          <TableHeader>
+            <TableRow style={{ backgroundColor: "var(--surface-raised)" }}>
+              {["Date", "Description", "Category", "Amount", "Actions"].map((col, i) => (
+                <TableHead
+                  key={col}
+                  className={`text-[10px] font-bold uppercase tracking-widest ${i >= 3 ? "text-right" : ""}`}
+                  style={{ color: "var(--fortress-steel)" }}
+                >
+                  {col}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {visibleTransactions.length > 0 ? (
+              visibleTransactions.map(t => (
+                <TableRow
+                  key={t.id}
+                  className="transition-colors"
+                  style={{ borderColor: "var(--border-subtle)" }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--surface-raised)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
+                  {/* Date */}
+                  <TableCell
+                    className="text-xs font-mono whitespace-nowrap"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                  </TableCell>
+
+                  {/* Description */}
+                  <TableCell
+                    className="max-w-[200px] truncate font-semibold text-sm"
+                    style={{ color: "var(--text-primary)" }}
+                    title={t.description}
+                  >
+                    {t.description}
+                  </TableCell>
+
+                  {/* Category */}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: getCategoryColor(t.category) }}
+                      />
+                      <span
+                        className="text-xs font-medium px-2 py-0.5 rounded"
+                        style={{
+                          backgroundColor: "var(--surface-raised)",
+                          color: "var(--fortress-steel)",
+                          border: "1px solid var(--border-subtle)",
+                        }}
+                      >
+                        {t.category}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Amount */}
+                  <TableCell
+                    className="text-right font-bold font-mono text-sm"
+                    style={{
+                      color: t.type === "income" ? "var(--field-green)" : "var(--castle-red)",
+                    }}
+                  >
+                    {t.type === "income" ? "+" : "−"}
+                    ${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 transition-colors"
+                        style={{ color: "var(--fortress-steel)" }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "var(--engine-navy)")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "var(--fortress-steel)")}
+                        onClick={() => onEdit(t)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 transition-colors"
+                        style={{ color: "var(--fortress-steel)" }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "var(--castle-red)")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "var(--fortress-steel)")}
+                        onClick={() => onDelete(t.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="h-48 text-center">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Search className="h-10 w-10 opacity-20" style={{ color: "var(--fortress-steel)" }} />
+                    <p className="font-semibold text-sm" style={{ color: "var(--fortress-steel)" }}>
+                      No transactions found
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      Adjust your search or check your archived data.
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

@@ -1,90 +1,123 @@
 import { Button } from "../ui/button";
-import { ArrowRight, CheckCircle2, BookOpen, PenTool, ShieldCheck, TrendingUp, Lock, Bell, Lightbulb, Coffee, ShoppingCart, ServerOff, AlertTriangle, Activity, PhoneIcon, SmartphoneIcon } from "lucide-react";
+import {
+  ArrowRight, CheckCircle2, PenTool, ShieldCheck, TrendingUp, Lock,
+  Bell, Lightbulb, Coffee, ShoppingCart, ServerOff, AlertTriangle,
+  Activity, SmartphoneIcon,
+} from "lucide-react";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { FortisLogo } from "./FortisLogo";
 import { FORTIS_VERSION, GIT_HASH, LAST_DEPLOYED } from "../version";
 
-// --- MOCK COMPONENTS (Mini App Widgets) ---
+// ── Mock widgets ──────────────────────────────────────────────────────────────
 
-// 1. Visual: Smart Alerts
 function MockAlertCard() {
   return (
-    <Card className="w-full max-w-sm mx-auto shadow-xl border-slate-200 bg-white p-5 transform transition-all hover:scale-[1.02]">
-       <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-3">
-         <div className="p-2 bg-red-100 text-red-600 rounded-lg">
-           <Bell className="h-5 w-5" />
-         </div>
-         <span className="font-bold text-gray-900">Active Alerts (2)</span>
-       </div>
-       <div className="space-y-3">
-         {/* Alert 1 */}
-         <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex gap-3 items-start">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-gray-900">Budget Warning</p>
-              <p className="text-xs text-gray-600 mt-1">Dining Out is at <span className="font-bold text-amber-700">85%</span> of your $500 limit.</p>
-            </div>
-         </div>
-         {/* Alert 2 */}
-         <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 items-start">
-            <Activity className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-gray-900">Large Transaction</p>
-              <p className="text-xs text-gray-600 mt-1">An expense of <span className="font-bold text-blue-700">$1,200</span> was just logged.</p>
-            </div>
-         </div>
-       </div>
-    </Card>
-  )
-}
-
-// 2. Visual: Recent Transactions
-function MockTransactionList() {
-  return (
-    <Card className="w-full max-w-sm mx-auto shadow-xl border-slate-200 bg-white transform transition-all hover:scale-[1.02]">
-      <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50">
-        <CardTitle className="text-sm font-bold text-gray-500 uppercase tracking-wide">Recent Activity</CardTitle>
-      </CardHeader>
-      <div className="divide-y divide-gray-100">
-        <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 text-orange-600 rounded-lg"><Coffee className="h-4 w-4" /></div>
-            <div><p className="font-medium text-gray-900">Morning Coffee</p><p className="text-xs text-gray-500">Today, 8:30 AM</p></div>
-          </div>
-          <span className="font-bold text-gray-900">-$4.50</span>
+    <Card
+      className="w-full max-w-sm mx-auto shadow-xl p-5 transform transition-all hover:scale-[1.02]"
+      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+    >
+      <div
+        className="flex items-center gap-3 mb-4 border-b pb-3"
+        style={{ borderColor: "var(--border-subtle)" }}
+      >
+        <div className="p-2 rounded-lg" style={{ backgroundColor: "#FEE2E2" }}>
+          <Bell className="h-5 w-5" style={{ color: "var(--castle-red)" }} />
         </div>
-        <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><ShoppingCart className="h-4 w-4" /></div>
-            <div><p className="font-medium text-gray-900">Groceries</p><p className="text-xs text-gray-500">Yesterday</p></div>
+        <span className="font-bold" style={{ color: "var(--text-primary)" }}>Active Alerts (2)</span>
+      </div>
+      <div className="space-y-3">
+        <div className="p-3 rounded-lg flex gap-3 items-start border" style={{ backgroundColor: "#FFFBEB", borderColor: "#FDE68A" }}>
+          <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" style={{ color: "var(--safety-amber)" }} />
+          <div>
+            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Budget Warning</p>
+            <p className="text-xs mt-1" style={{ color: "var(--fortress-steel)" }}>
+              Dining Out is at <span className="font-bold" style={{ color: "var(--safety-amber)" }}>85%</span> of your $500 limit.
+            </p>
           </div>
-          <span className="font-bold text-gray-900">-$82.15</span>
         </div>
-        <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 text-green-600 rounded-lg"><TrendingUp className="h-4 w-4" /></div>
-            <div><p className="font-medium text-gray-900">Paycheck</p><p className="text-xs text-gray-500">Friday</p></div>
+        <div className="p-3 rounded-lg flex gap-3 items-start border" style={{ backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }}>
+          <Activity className="h-5 w-5 shrink-0 mt-0.5 text-blue-600" />
+          <div>
+            <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Large Transaction</p>
+            <p className="text-xs mt-1" style={{ color: "var(--fortress-steel)" }}>
+              An expense of <span className="font-bold text-blue-700">$1,200</span> was just logged.
+            </p>
           </div>
-          <span className="font-bold text-green-600">+$2,400.00</span>
         </div>
       </div>
     </Card>
   );
 }
 
-// 3. Visual: Daily Insight
+function MockTransactionList() {
+  return (
+    <Card
+      className="w-full max-w-sm mx-auto shadow-xl transform transition-all hover:scale-[1.02]"
+      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+    >
+      <CardHeader
+        className="pb-3 border-b"
+        style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+      >
+        <CardTitle
+          className="text-xs font-bold uppercase tracking-widest"
+          style={{ color: "var(--fortress-steel)" }}
+        >
+          Recent Activity
+        </CardTitle>
+      </CardHeader>
+      <div className="divide-y" style={{ borderColor: "var(--border-subtle)" }}>
+        {[
+          { icon: Coffee,       bg: "#FFF7ED", color: "#EA580C", label: "Morning Coffee", sub: "Today, 8:30 AM", amount: "−$4.50",     ac: "var(--castle-red)" },
+          { icon: ShoppingCart, bg: "#EFF6FF", color: "#2563EB", label: "Groceries",      sub: "Yesterday",    amount: "−$82.15",    ac: "var(--castle-red)" },
+          { icon: TrendingUp,   bg: "#F0FDF4", color: "#16A34A", label: "Paycheck",       sub: "Friday",       amount: "+$2,400.00", ac: "var(--field-green)" },
+        ].map(({ icon: Icon, bg, color, label, sub, amount, ac }) => (
+          <div
+            key={label}
+            className="flex items-center justify-between p-4 transition-colors"
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--surface-raised)")}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: bg }}>
+                <Icon className="h-4 w-4" style={{ color }} />
+              </div>
+              <div>
+                <p className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>{label}</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>{sub}</p>
+              </div>
+            </div>
+            <span className="font-bold font-mono text-sm" style={{ color: ac }}>{amount}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function MockDailyInsight() {
   return (
     <div className="w-full max-w-md mx-auto transform transition-all hover:scale-[1.02]">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-8 rounded-2xl shadow-lg">
+      <div
+        className="p-8 rounded-2xl shadow-lg border"
+        style={{
+          background: "linear-gradient(135deg, #EFF6FF 0%, #EEF2FF 100%)",
+          borderColor: "#BFDBFE",
+        }}
+      >
         <div className="flex items-start gap-4">
-          <div className="bg-white p-3 rounded-full shadow-sm text-blue-600 mt-1">
-            <Lightbulb className="h-6 w-6" />
+          <div className="bg-white p-3 rounded-full shadow-sm mt-1">
+            <Lightbulb className="h-6 w-6" style={{ color: "var(--engine-navy)" }} />
           </div>
           <div>
-            <h4 className="font-bold text-blue-900 text-sm uppercase tracking-wide mb-2">Daily Wisdom</h4>
-            <p className="text-blue-900 text-lg leading-relaxed font-medium">
-              "The 24-Hour Rule: Wait one full day before making any non-essential purchase over $50. Impulse buys are the enemy of wealth."
+            <h4
+              className="text-xs font-bold uppercase tracking-widest mb-2"
+              style={{ color: "var(--engine-navy)" }}
+            >
+              Daily Wisdom
+            </h4>
+            <p className="text-base leading-relaxed font-medium" style={{ color: "var(--engine-navy)" }}>
+              The 24-Hour Rule: Wait one full day before making any non-essential purchase over $50. Impulse buys are the enemy of wealth.
             </p>
           </div>
         </div>
@@ -93,40 +126,51 @@ function MockDailyInsight() {
   );
 }
 
-// 4. Visual: Security Status
 function MockSecurityCard() {
   return (
-    <Card className="w-full max-w-sm mx-auto shadow-xl border-slate-200 bg-white p-6 transform transition-all hover:scale-[1.02]">
+    <Card
+      className="w-full max-w-sm mx-auto shadow-xl p-6 transform transition-all hover:scale-[1.02]"
+      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+    >
       <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 bg-green-100 rounded-full">
-           <ShieldCheck className="h-6 w-6 text-green-600" />
+        <div className="p-3 rounded-full" style={{ backgroundColor: "#DCFCE7" }}>
+          <ShieldCheck className="h-6 w-6" style={{ color: "var(--field-green)" }} />
         </div>
         <div>
-           <h4 className="font-bold text-gray-900 text-lg">Privacy Shield</h4>
-           <p className="text-sm text-green-600 font-medium flex items-center gap-1">
-             <CheckCircle2 className="h-3 w-3" /> Active & Monitoring
-           </p>
+          <h4 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>Privacy Shield</h4>
+          <p className="text-sm font-medium flex items-center gap-1" style={{ color: "var(--field-green)" }}>
+            <CheckCircle2 className="h-3 w-3" /> Active & Monitoring
+          </p>
         </div>
       </div>
       <div className="space-y-3">
-        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-           <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-             <ServerOff className="h-4 w-4 text-gray-400" /> Bank Connections
-           </span>
-           <span className="text-xs font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded">NONE</span>
-        </div>
-        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-           <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-             <Lock className="h-4 w-4 text-gray-400" /> Data Storage
-           </span>
-           <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">ENCRYPTED</span>
-        </div>
+        {[
+          { icon: ServerOff, label: "Bank Connections", badge: "NONE",      badgeBg: "var(--surface-raised)", badgeColor: "var(--fortress-steel)" },
+          { icon: Lock,      label: "Data Storage",    badge: "ENCRYPTED",  badgeBg: "#DBEAFE",               badgeColor: "#1E40AF" },
+        ].map(({ icon: Icon, label, badge, badgeBg, badgeColor }) => (
+          <div
+            key={label}
+            className="flex justify-between items-center p-3 rounded-lg border"
+            style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+          >
+            <span className="text-sm font-medium flex items-center gap-2" style={{ color: "var(--fortress-steel)" }}>
+              <Icon className="h-4 w-4 opacity-50" />
+              {label}
+            </span>
+            <span
+              className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide"
+              style={{ backgroundColor: badgeBg, color: badgeColor }}
+            >
+              {badge}
+            </span>
+          </div>
+        ))}
       </div>
     </Card>
-  )
+  );
 }
 
-// --- MAIN PAGE ---
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -137,21 +181,34 @@ interface LandingPageProps {
 
 export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 font-sans text-slate-900">
-      
-      {/* Navigation */}
-      <nav className="w-full border-b border-gray-200 bg-white/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+    <div className="min-h-screen font-sans" style={{ backgroundColor: "var(--surface)", color: "var(--text-primary)" }}>
+
+      {/* ── Nav ─────────────────────────────────────────────────────────────── */}
+      <nav
+        className="w-full border-b sticky top-0 z-50 backdrop-blur-sm"
+        style={{
+          backgroundColor: "var(--engine-navy)",
+          borderColor: "rgba(255,255,255,0.08)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.25)",
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center">
-              <div className="flex items-center gap-3">
-                {/* FIXED: Added explicit size control to logo */}
-                <FortisLogo className="h-10 w-auto sm:h-12" />
-              </div>
-            </div>
+            <FortisLogo className="h-10 w-auto sm:h-12" />
             <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-600 hidden sm:inline">Returning User?</span>
-              <Button variant="outline" onClick={onSignIn} className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 font-medium">
+              <span className="text-sm font-medium hidden sm:inline" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Returning User?
+              </span>
+              <Button
+                variant="outline"
+                onClick={onSignIn}
+                className="font-bold text-sm"
+                style={{
+                  borderColor: "rgba(255,255,255,0.25)",
+                  color: "#FFFFFF",
+                  backgroundColor: "rgba(255,255,255,0.08)",
+                }}
+              >
                 Sign In
               </Button>
             </div>
@@ -160,286 +217,260 @@ export function LandingPage({ onGetStarted, onSignIn, onOpenPrivacy, onOpenTerms
       </nav>
 
       <main>
-        {/* Hero Section */}
+        {/* ── Hero ────────────────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            {/* Logo in hero - forced size with inline style */}
-            <div className="text-center mb-8">
-              <div className="mb-4 flex justify-center">
-                <div style={{ maxHeight: '80px', height: '80px' }}>
-                  <FortisLogo className="h-full w-auto animate-in fade-in zoom-in duration-700" />
-                </div>
-              </div>
-              <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                Build better money habits through intentional tracking. No bank connections, no automated imports. Just you, your goals, and complete control.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full pt-4">
-                <Button variant="outline" size="lg" onClick={onGetStarted} className="h-12 px-8 text-lg font-semibold shadow-lg hover:-translate-y-0.5 transition-transform">
-                  Start Tracking for Free <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-              {/* Privacy Policy Link for Google Verification */}
-              <p className="text-sm text-gray-500 mt-4">
-                By signing up, you agree to our{' '}
-                <button 
-                  onClick={onOpenTerms}
-                  className="text-blue-600 hover:text-blue-700 underline font-medium"
-                >
-                  Terms of Service
-                </button>
-                {' '}and{' '}
-                <button 
-                  onClick={onOpenPrivacy}
-                  className="text-blue-600 hover:text-blue-700 underline font-medium"
-                >
-                  Privacy Policy
-                </button>
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-gray-500 font-medium pt-8">
-                <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-green-600" /><span>Private & Secure</span></div>
-                <div className="hidden sm:block text-gray-300">•</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-blue-600" /><span>Completely Free</span></div>
-                <div className="hidden sm:block text-gray-300">•</div>
-                <div className="flex items-center gap-2"><SmartphoneIcon className="w-5 h-5 text-red-600" /><span>Mobile Friendly</span></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="mb-4 flex justify-center">
+              <div style={{ height: "80px" }}>
+                <FortisLogo className="h-full w-auto animate-in fade-in zoom-in duration-700" />
               </div>
             </div>
-        </div>
+
+            <p className="text-xl leading-relaxed max-w-2xl mx-auto mt-4" style={{ color: "var(--fortress-steel)" }}>
+              Build better money habits through intentional tracking. No bank connections, no automated imports. Just you, your goals, and complete control.
+            </p>
+
+            <div className="flex justify-center mt-8">
+              <Button
+                size="lg"
+                onClick={onGetStarted}
+                className="h-12 px-8 text-lg font-bold text-white hover:-translate-y-0.5 transition-transform"
+                style={{
+                  backgroundColor: "var(--castle-red)",
+                  border: "none",
+                  boxShadow: "0 4px 0 0 var(--castle-red-dark)",
+                }}
+              >
+                Start Tracking for Free <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+
+            <p className="text-xs mt-4" style={{ color: "var(--text-muted)" }}>
+              By signing up you agree to our{" "}
+              <button onClick={onOpenTerms} className="underline font-medium" style={{ color: "var(--castle-red)" }}>
+                Terms of Service
+              </button>{" "}
+              and{" "}
+              <button onClick={onOpenPrivacy} className="underline font-medium" style={{ color: "var(--castle-red)" }}>
+                Privacy Policy
+              </button>
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm font-medium pt-8" style={{ color: "var(--fortress-steel)" }}>
+              <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5" style={{ color: "var(--field-green)" }} /><span>Private & Secure</span></div>
+              <div className="hidden sm:block opacity-30">•</div>
+              <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5" style={{ color: "var(--engine-navy)" }} /><span>Completely Free</span></div>
+              <div className="hidden sm:block opacity-30">•</div>
+              <div className="flex items-center gap-2"><SmartphoneIcon className="w-5 h-5" style={{ color: "var(--castle-red)" }} /><span>Mobile Friendly</span></div>
+            </div>
+          </div>
         </section>
 
-        {/* --- GRID SECTION --- */}
-        <section id="features" className="py-20 bg-white border-t border-gray-100">
+        {/* ── Features grid ───────────────────────────────────────────────────── */}
+        <section
+          id="features"
+          className="py-20 border-t"
+          style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+        >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16 max-w-2xl mx-auto space-y-6" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', rowGap: '1rem' }}>
-              <h2 className="text-2xl mt-8 font-bold text-black-600 tracking-wide uppercase">Why FortisBudget?</h2>
-              <p className="text-lg text-gray-600 leading-relaxed">Most apps track your spending. We change your behavior.</p>
+            <div className="text-center mb-16">
+              <h2
+                className="text-2xl font-bold uppercase tracking-widest"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Why FortisBudget?
+              </h2>
+              <p className="mt-3 text-lg" style={{ color: "var(--fortress-steel)" }}>
+                Most apps track your spending. We change your behavior.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Feature 1 */}
-              <div className="group bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="flex flex-col items-center text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-100 text-blue-600 mb-6"><PenTool className="h-8 w-8" /></div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-3">Intentional Friction</h4>
-                  <p className="text-gray-600 leading-relaxed">Manual entry forces you to "feel" every transaction.</p>
+              {[
+                { icon: PenTool,     bg: "#DBEAFE", color: "#2563EB", title: "Intentional Friction",  body: "Manual entry forces you to \"feel\" every transaction." },
+                { icon: Lock,        bg: "#DCFCE7", color: "#16A34A", title: "Zero-Link Security",    body: "No bank passwords required. Your data stays local and safe." },
+                { icon: Bell,        bg: "#FEE2E2", color: "#DC2626", title: "Smart Alerts",          body: "Proactive warnings before you overspend, not after." },
+              ].map(({ icon: Icon, bg, color, title, body }) => (
+                <div
+                  key={title}
+                  className="rounded-2xl p-8 border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-6" style={{ backgroundColor: bg }}>
+                      <Icon className="h-6 w-6" style={{ color }} />
+                    </div>
+                    <h4 className="text-xl font-bold mb-3" style={{ color: "var(--text-primary)" }}>{title}</h4>
+                    <p style={{ color: "var(--fortress-steel)" }}>{body}</p>
+                  </div>
                 </div>
-              </div>
-              {/* Feature 2 */}
-              <div className="group bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="flex flex-col items-center text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-100 text-green-600 mb-6"><Lock className="h-8 w-8" /></div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-3">Zero-Link Security</h4>
-                  <p className="text-gray-600 leading-relaxed">No bank passwords required. Your data stays local and safe.</p>
-                </div>
-              </div>
-              {/* Feature 3: Smart Alerts */}
-              <div className="group bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="flex flex-col items-center text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-red-100 text-red-600 mb-6"><Bell className="h-8 w-8" /></div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-3">Smart Alerts</h4>
-                  <p className="text-gray-600 leading-relaxed">Proactive warnings before you overspend, not after.</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* --- SPOTLIGHT 1: MANUAL ENTRY --- */}
-        <section className="py-24 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center gap-16">
-              <div className="lg:w-1/2 space-y-8">
-                <h3 className="text-3xl mt-8 md:text-4xl font-extrabold text-gray-900 leading-tight">
-                  Stop forgetting what you spend.
-                </h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Automated apps are designed to be ignored. When you manually log a transaction, you create a psychological connection to your money. 
-                  <br /><br />
-                  It takes 5 seconds, but the awareness lasts all day.
-                </p>
-                <div className="flex items-center gap-2 text-blue-700 font-medium">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>Builds mindful habits instantly</span>
+        {/* ── Spotlight sections ──────────────────────────────────────────────── */}
+        {[
+          {
+            title:   "Stop forgetting what you spend.",
+            body:    "Automated apps are designed to be ignored. When you manually log a transaction, you create a psychological connection to your money.\n\nIt takes 5 seconds, but the awareness lasts all day.",
+            badge:   "Builds mindful habits instantly",
+            badgeColor: "var(--engine-navy)",
+            widget:  <MockTransactionList />,
+            reverse: false,
+          },
+          {
+            title:   "Sovereign Security.",
+            body:    "We don't want your bank credentials, and you shouldn't give them to anyone.\n\nBy removing the bank connection, we eliminate the risk of a third-party breach.",
+            badge:   "Zero-Link Technology",
+            badgeColor: "var(--field-green)",
+            widget:  <MockSecurityCard />,
+            reverse: false,
+          },
+          {
+            title:   "Proactive defense for your wallet.",
+            body:    "Most apps tell you after you've blown your budget. FortisBudget warns you before it happens.\n\nSet configurable thresholds (50–95%) and catch large transactions instantly.",
+            badge:   "Customizable warning triggers",
+            badgeColor: "var(--fortress-steel)",
+            widget:  <MockAlertCard />,
+            reverse: false,
+          },
+          {
+            title:   "Financial literacy built-in.",
+            body:    "Budgeting is a skill, not just a task. Receive daily actionable insights and access our library of guides to master your money.",
+            badge:   "Daily tips & strategies",
+            badgeColor: "#6366F1",
+            widget:  <MockDailyInsight />,
+            reverse: true,
+          },
+        ].map(({ title, body, badge, badgeColor, widget, reverse }) => (
+          <section key={title} className="py-24 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className={`flex flex-col ${reverse ? "lg:flex-row-reverse" : "lg:flex-row"} items-center gap-16`}>
+                <div className="lg:w-1/2 space-y-6">
+                  <h3 className="text-3xl md:text-4xl font-extrabold leading-tight" style={{ color: "var(--text-primary)" }}>
+                    {title}
+                  </h3>
+                  {body.split("\n\n").map((para, i) => (
+                    <p key={i} className="text-lg leading-relaxed" style={{ color: "var(--fortress-steel)" }}>{para}</p>
+                  ))}
+                  <div className="flex items-center gap-2 font-medium">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0" style={{ color: badgeColor }} />
+                    <span style={{ color: badgeColor }}>{badge}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="lg:w-1/2 w-full">
-                <MockTransactionList />
+                <div className="lg:w-1/2 w-full">{widget}</div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ))}
 
-        {/* --- SPOTLIGHT 2: SECURITY --- */}
-        <section className="py-24 overflow-hidden">
+        {/* ── How It Works ────────────────────────────────────────────────────── */}
+        <section
+          id="how-it-works"
+          className="py-20 border-t"
+          style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
+        >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center gap-16">
-              <div className="lg:w-1/2 space-y-8">
-                <h3 className="text-3xl mt-8 md:text-4xl font-extrabold text-gray-900 leading-tight">
-                  Sovereign Security.
-                </h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  We don't want your bank credentials, and you shouldn't give them to anyone. 
-                  <br /><br />
-                  By removing the bank connection, we eliminate the risk of a third-party breach. Your financial data is yours alone.
-                </p>
-                <div className="flex items-center gap-2 text-green-700 font-medium">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>Zero-Link Technology</span>
-                </div>
-              </div>
-              <div className="lg:w-1/2 w-full">
-                <MockSecurityCard />
-              </div>
+            <div className="text-center mb-16">
+              <h2 className="text-2xl font-bold uppercase tracking-widest" style={{ color: "var(--fortress-steel)" }}>
+                How It Works
+              </h2>
+              <h3 className="text-3xl sm:text-4xl font-extrabold mt-4" style={{ color: "var(--text-primary)" }}>
+                Get started in 3 simple steps
+              </h3>
             </div>
-          </div>
-        </section>
-
-        {/* --- SPOTLIGHT 3: SMART ALERTS (NEW) --- */}
-        <section className="py-24 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col lg:flex-row items-center gap-16">
-              <div className="lg:w-1/2 space-y-8">
-                <h3 className="text-3xl mt-8 md:text-4xl font-extrabold text-gray-900 leading-tight">
-                  Proactive defense for your wallet.
-                </h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Most apps tell you after you've blown your budget. FortisBudget warns you before it happens.
-                  <br /><br />
-                  Set configurable thresholds (50-95%) and catch large transactions instantly.
-                </p>
-                <div className="flex items-center gap-2 text-gray-700 font-medium">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>Customizable warning triggers</span>
-                </div>
-              </div>
-              <div className="lg:w-1/2 w-full">
-                <MockAlertCard />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* --- SPOTLIGHT 4: EDUCATION --- */}
-        <section className="py-24 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
-              <div className="lg:w-1/2 space-y-8">
-                <h3 className="text-3xl mt-8 md:text-4xl font-extrabold text-gray-900 leading-tight">
-                  Financial literacy built-in.
-                </h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Budgeting is a skill, not just a task. Receive daily actionable insights and access our library of guides to master your money.
-                </p>
-                <div className="flex items-center gap-2 text-indigo-700 font-medium">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>Daily tips & strategies</span>
-                </div>
-              </div>
-              <div className="lg:w-1/2 w-full">
-                <MockDailyInsight />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* How It Works Section */}
-        <section id="how-it-works" className="py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16 space-y-6" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', rowGap: '1.5rem' }}>
-              <h2 className="text-2xl mt-8 font-bold text-black-600 tracking-wide uppercase">How It Works</h2>
-              <h3 className="text-3xl sm:text-4xl mb-8 font-extrabold text-gray-900">Get started in 3 simple steps</h3>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative">
-              <div className="hidden md:block absolute top-10 left-[16%] right-[16%] h-0.5 bg-gray-200 -z-10"></div>
-              <div className="relative text-center pt-4">
-                <h4 className="text-xl font-bold text-gray-900 mb-3">1. Create Your Account</h4>
-                <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">Sign up in seconds. No credit card required.</p>
-              </div>
-              <div className="relative text-center pt-4">
-                <h4 className="text-xl font-bold text-gray-900 mb-3">2. Set Your Goals</h4>
-                <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">Define your savings targets and budgets.</p>
-              </div>
-              <div className="relative text-center pt-4">
-                <h4 className="text-xl font-bold text-gray-900 mb-3">3. Track & Grow</h4>
-                <p className="text-gray-600 max-w-sm mx-auto leading-relaxed">Log expenses daily and build wealth.</p>
-              </div>
+              <div className="hidden md:block absolute top-10 left-[16%] right-[16%] h-px" style={{ backgroundColor: "var(--border)" }} />
+              {[
+                { n: "1", title: "Create Your Account", body: "Sign up in seconds. No credit card required." },
+                { n: "2", title: "Set Your Goals",      body: "Define your savings targets and budgets." },
+                { n: "3", title: "Track & Grow",        body: "Log expenses daily and build wealth." },
+              ].map(({ n, title, body }) => (
+                <div key={n} className="relative text-center pt-4">
+                  <div
+                    className="w-10 h-10 rounded-full font-bold text-white flex items-center justify-center mx-auto mb-4 text-lg"
+                    style={{ backgroundColor: "var(--castle-red)" }}
+                  >
+                    {n}
+                  </div>
+                  <h4 className="text-xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>{title}</h4>
+                  <p style={{ color: "var(--fortress-steel)" }}>{body}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-20">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-10" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', rowGap: '2.5rem' }}>
-            <div>
-              <h2 className="text-4xl sm:text-5xl font-extrabold text-white mb-6 leading-tight">Ready to take control?</h2>
-              <p className="text-xl text-blue-50 max-w-2xl mx-auto leading-relaxed">Join thousands of intentional spenders building better money habits today.</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-5 justify-center">
-              <Button size="lg" variant="outline" onClick={onGetStarted} className="text-black-600 hover:bg-blue-50 text-lg font-bold shadow-xl border-none px-10 py-6 h-auto">
-                Start Your Journey <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
-            {/* Privacy Policy Link */}
-            <p className="text-sm text-blue-100 mt-4">
-              By getting started, you agree to our{' '}
-              <button 
-                onClick={onOpenTerms}
-                className="text-blue-600 hover:text-blue-700 underline font-medium"
-              >
-                Terms of Service
-              </button>
-              {' '}and{' '}
-              <button 
-                onClick={onOpenPrivacy}
-                className="text-blue-600 hover:text-blue-700 underline font-medium"
-              >
-                Privacy Policy
-              </button>
+        {/* ── CTA ─────────────────────────────────────────────────────────────── */}
+        <section
+          className="py-24"
+          style={{ backgroundColor: "var(--engine-navy)" }}
+        >
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-white mb-6 leading-tight">
+              Ready to take control?
+            </h2>
+            <p className="text-xl max-w-2xl mx-auto mb-10" style={{ color: "rgba(255,255,255,0.65)" }}>
+              Join thousands of intentional spenders building better money habits today.
+            </p>
+            <Button
+              size="lg"
+              onClick={onGetStarted}
+              className="text-white font-bold text-lg px-10 py-6 h-auto hover:-translate-y-0.5 transition-transform"
+              style={{
+                backgroundColor: "var(--castle-red)",
+                border: "none",
+                boxShadow: "0 4px 0 0 var(--castle-red-dark)",
+              }}
+            >
+              Start Your Journey <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <p className="text-xs mt-6" style={{ color: "rgba(255,255,255,0.4)" }}>
+              By getting started, you agree to our{" "}
+              <button onClick={onOpenTerms} className="underline" style={{ color: "rgba(255,255,255,0.6)" }}>Terms of Service</button>
+              {" "}and{" "}
+              <button onClick={onOpenPrivacy} className="underline" style={{ color: "rgba(255,255,255,0.6)" }}>Privacy Policy</button>
             </p>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
+        {/* ── Footer ──────────────────────────────────────────────────────────── */}
+        <footer className="py-12 border-t" style={{ backgroundColor: "#0F172A", borderColor: "rgba(255,255,255,0.06)" }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-8">
-            <div className="flex flex-col items-center gap-4">
-              {/* FIXED: Logo in footer with appropriate size */}
-              <FortisLogo className="h-12 w-auto sm:h-16" />
-              <p className="text-gray-500 text-center max-w-md leading-relaxed">
-                Built for intentional spenders who want to take manual control of their financial future.
-              </p>
-            </div>
-            
-            <div className="flex items-center mt-6 gap-6 text-sm font-medium">
-  {/* TARGETED FIX: Real file path for Google Bots */}
-  <a 
-    href="/privacy-policy.html" 
-    target="_blank" 
-    rel="noopener noreferrer"
-    className="hover:text-white transition-colors underline decoration-gray-700 underline-offset-4"
-  >
-    Privacy Policy
-  </a>
-              <a 
-                href="#" 
-                onClick={(e) => { e.preventDefault(); onOpenTerms(); }} 
-                className="hover:text-white transition-colors"
+            <FortisLogo className="h-12 w-auto sm:h-16" />
+            <p className="text-center max-w-md leading-relaxed text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+              Built for intentional spenders who want to take manual control of their financial future.
+            </p>
+
+            <div className="flex items-center gap-6 text-sm font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <a
+                href="/privacy-policy.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-4 transition-colors hover:text-white"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); onOpenTerms(); }}
+                className="transition-colors hover:text-white"
               >
                 Terms of Service
               </a>
             </div>
 
-            <p className="text-gray-600 mt-6 text-xs">
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
               &copy; {new Date().getFullYear()} FortisBudget. All rights reserved.
             </p>
           </div>
-          
-<div className="flex flex-col items-center justify-center w-full mt-12 pb-8 opacity-40">
-  <p className="text-[10px] font-mono text-gray-500 uppercase">
-    FORTIS_v{FORTIS_VERSION} // {GIT_HASH} // {LAST_DEPLOYED}
-  </p>
-</div>
 
+          <div className="flex flex-col items-center justify-center w-full mt-8 pb-4 opacity-30">
+            <p className="text-[10px] font-mono uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>
+              FORTIS_v{FORTIS_VERSION} // {GIT_HASH} // {LAST_DEPLOYED}
+            </p>
+          </div>
         </footer>
       </main>
     </div>

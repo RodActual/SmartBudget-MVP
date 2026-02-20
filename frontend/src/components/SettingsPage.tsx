@@ -1,28 +1,15 @@
-import { useState, useMemo, useEffect } from "react"; // 1. Added useEffect
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Save, Target, Lock, Trash2, AlertTriangle, ShieldCheck, Archive, RotateCcw } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import type { Budget, Transaction } from "../App";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { auth, db } from "../firebase";
@@ -35,8 +22,22 @@ interface SettingsPageProps {
   transactions: Transaction[];
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   onDeleteTransaction: (id: string) => Promise<void>;
-  onNavigate: (mode: 'privacy' | 'terms') => void;
+  onNavigate: (mode: "privacy" | "terms") => void;
 }
+
+// ── Shared input style ─────────────────────────────────────────────────────────
+const inputStyle: React.CSSProperties = {
+  backgroundColor: "var(--surface-raised)",
+  borderColor:     "var(--border-subtle)",
+  color:           "var(--text-primary)",
+};
+
+const labelStyle: React.CSSProperties = {
+  color:         "var(--fortress-steel)",
+  fontWeight:    600,
+  fontSize:      "0.8125rem",
+  letterSpacing: "0.01em",
+};
 
 export function SettingsPage({
   budgets,
@@ -45,309 +46,269 @@ export function SettingsPage({
   onDeleteTransaction,
   onNavigate,
 }: SettingsPageProps) {
-  
-  // Use custom hook for user settings
   const { userName, savingsGoal, updateUserName, updateSavingsGoal } = useUserSettings();
-  
-  // Local state for form inputs
-  const [tempUserName, setTempUserName] = useState(userName);
-  const [tempSavingsGoal, setTempSavingsGoal] = useState(savingsGoal.toString());
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Password state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [tempUserName, setTempUserName]       = useState(userName);
+  const [tempSavingsGoal, setTempSavingsGoal] = useState(savingsGoal.toString());
+  const [isSaving, setIsSaving]               = useState(false);
+  const [saveMessage, setSaveMessage]         = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [currentPassword, setCurrentPassword]   = useState("");
+  const [newPassword, setNewPassword]           = useState("");
+  const [confirmPassword, setConfirmPassword]   = useState("");
+  const [passwordError, setPasswordError]       = useState("");
+  const [passwordSuccess, setPasswordSuccess]   = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  // Delete account state
   const [deletePassword, setDeletePassword] = useState("");
-  const [deleteError, setDeleteError] = useState("");
+  const [deleteError, setDeleteError]       = useState("");
 
-  // Archived transactions
-  const archivedTransactions = useMemo(() => {
-    return transactions.filter(t => t.archived === true);
-  }, [transactions]);
+  const archivedTransactions = useMemo(
+    () => transactions.filter(t => t.archived === true),
+    [transactions]
+  );
 
-  // 2. CHANGED: Used useEffect to correctly sync form with fetched data
   useEffect(() => {
     setTempUserName(userName);
     setTempSavingsGoal(savingsGoal.toString());
   }, [userName, savingsGoal]);
 
-  // Save settings handler
   const handleSave = async () => {
     setSaveMessage(null);
     setIsSaving(true);
     try {
       if (tempUserName.trim()) updateUserName(tempUserName.trim());
-      const goalValue = parseFloat(tempSavingsGoal);
-      if (!isNaN(goalValue) && goalValue >= 0) updateSavingsGoal(goalValue);
-      // Fake delay for UX feel
-      await new Promise(resolve => setTimeout(resolve, 500)); 
-      setSaveMessage({ type: 'success', text: "Settings saved successfully! ✅" });
-    } catch (e) {
-      setSaveMessage({ type: 'error', text: "Failed to save settings." });
+      const g = parseFloat(tempSavingsGoal);
+      if (!isNaN(g) && g >= 0) updateSavingsGoal(g);
+      await new Promise(r => setTimeout(r, 500));
+      setSaveMessage({ type: "success", text: "Settings saved successfully." });
+    } catch {
+      setSaveMessage({ type: "error", text: "Failed to save settings." });
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(null), 3000);
     }
   };
 
-  // Password update handler
   const handleUpdatePassword = async () => {
     setPasswordError("");
     setPasswordSuccess("");
-    
     const user = auth.currentUser;
-    if (!user) {
-      setPasswordError("No user logged in");
-      return;
-    }
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError("Please fill in all password fields");
-      return;
-    }
-    
-    if (newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters");
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
-      return;
-    }
-
+    if (!user) { setPasswordError("No user logged in"); return; }
+    if (!currentPassword || !newPassword || !confirmPassword) { setPasswordError("Please fill in all fields"); return; }
+    if (newPassword.length < 6) { setPasswordError("New password must be at least 6 characters"); return; }
+    if (newPassword !== confirmPassword) { setPasswordError("New passwords do not match"); return; }
     setIsUpdatingPassword(true);
-    
     try {
-      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
-      await reauthenticateWithCredential(user, credential);
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email!, currentPassword));
       await updatePassword(user, newPassword);
-      
-      setPasswordSuccess("Password updated successfully!");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setPasswordSuccess("Password updated successfully.");
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       setTimeout(() => setPasswordSuccess(""), 3000);
-    } catch (error: any) {
-      setPasswordError(error.message || "Failed to update password");
+    } catch (err: any) {
+      setPasswordError(err.message || "Failed to update password");
     } finally {
       setIsUpdatingPassword(false);
     }
   };
 
-  // Delete account handler
   const handleDeleteAccount = async () => {
     setDeleteError("");
-    
     const user = auth.currentUser;
-    if (!user) {
-      setDeleteError("No user logged in");
-      return;
-    }
-
-    if (!deletePassword) {
-      setDeleteError("Please enter your password to confirm");
-      return;
-    }
-
+    if (!user) { setDeleteError("No user logged in"); return; }
+    if (!deletePassword) { setDeleteError("Please enter your password to confirm"); return; }
     try {
-      // Reauthenticate
-      const credential = EmailAuthProvider.credential(user.email!, deletePassword);
-      await reauthenticateWithCredential(user, credential);
-      
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email!, deletePassword));
       const uid = user.uid;
-      
-      // Delete all user data
       const batch = writeBatch(db);
-      
-      const transactionsSnap = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
-      transactionsSnap.docs.forEach(d => batch.delete(d.ref));
-      
-      const budgetsSnap = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
-      budgetsSnap.docs.forEach(d => batch.delete(d.ref));
-      
+      (await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)))).docs.forEach(d => batch.delete(d.ref));
+      (await getDocs(query(collection(db, "budgets"),      where("userId", "==", uid)))).docs.forEach(d => batch.delete(d.ref));
       batch.delete(doc(db, "userSettings", uid));
-      
       await batch.commit();
-      
-      // Delete the user account
       await deleteUser(user);
-      
-      // Success - user will be logged out automatically
-    } catch (error: any) {
-      console.error("Delete Account Error:", error);
-      setDeleteError(error.message || "Failed to delete account");
+    } catch (err: any) {
+      setDeleteError(err.message || "Failed to delete account");
     }
   };
 
-  // Archived transaction handlers
-  const handleRestoreTransaction = async (transaction: Transaction) => {
-    try {
-      await onUpdateTransaction(transaction.id, { archived: false });
-    } catch (error) {
-      console.error("Failed to restore transaction:", error);
-      alert("Failed to restore transaction. Please try again.");
-    }
-  };
-
-  const handleDeleteTransactionPermanently = async (transaction: Transaction) => {
-    if (window.confirm(`Permanently delete "${transaction.description}"? This cannot be undone.`)) {
-      try {
-        await onDeleteTransaction(transaction.id);
-      } catch (error) {
-        console.error("Failed to delete transaction:", error);
-        alert("Failed to delete transaction. Please try again.");
-      }
-    }
-  };
-
-  const handleRestoreAll = async () => {
-    if (window.confirm(`Restore all ${archivedTransactions.length} archived transactions?`)) {
-      try {
-        await Promise.all(
-          archivedTransactions.map(t => onUpdateTransaction(t.id, { archived: false }))
-        );
-      } catch (error) {
-        console.error("Failed to restore all transactions:", error);
-        alert("Failed to restore some transactions. Please try again.");
-      }
-    }
-  };
-
-  const handleDeleteAllPermanently = async () => {
-    if (window.confirm(`⚠️ PERMANENTLY DELETE all ${archivedTransactions.length} archived transactions?\n\nThis action CANNOT be undone!`)) {
-      if (window.confirm("Are you absolutely sure? Type 'DELETE' to confirm.") === false) {
-        return;
-      }
-      
-      try {
-        await Promise.all(
-          archivedTransactions.map(t => onDeleteTransaction(t.id))
-        );
-      } catch (error) {
-        console.error("Failed to delete all transactions:", error);
-        alert("Failed to delete some transactions. Please try again.");
-      }
-    }
-  };
+  const handleRestoreTransaction   = async (t: Transaction) => { try { await onUpdateTransaction(t.id, { archived: false }); } catch { alert("Failed to restore."); } };
+  const handleDeletePermanently    = async (t: Transaction) => { if (window.confirm(`Permanently delete "${t.description}"? This cannot be undone.`)) { try { await onDeleteTransaction(t.id); } catch { alert("Failed to delete."); } } };
+  const handleRestoreAll           = async () => { if (window.confirm(`Restore all ${archivedTransactions.length} archived transactions?`)) { await Promise.all(archivedTransactions.map(t => onUpdateTransaction(t.id, { archived: false }))); } };
+  const handleDeleteAllPermanently = async () => { try { await Promise.all(archivedTransactions.map(t => onDeleteTransaction(t.id))); } catch { alert("Failed to delete some transactions."); } };
 
   return (
     <div className="space-y-6 pb-12">
+
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Manage your account preferences and security.</p>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Settings</h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--fortress-steel)" }}>
+          Manage your account preferences and security.
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Personal Settings */}
-        <Card className="border-slate-200">
+
+        {/* ── Personal Settings ────────────────────────────────────────────────── */}
+        <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
           <CardHeader>
-            <CardTitle>Personal Settings</CardTitle>
-            <CardDescription>Update your profile and savings targets</CardDescription>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
+              Personal Settings
+            </CardTitle>
+            <CardDescription style={{ color: "var(--fortress-steel)" }}>
+              Update your profile and savings targets
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="userName">Your Name</Label>
-              <Input id="userName" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} />
+          <CardContent className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="userName" style={labelStyle}>Your Name</Label>
+              <Input id="userName" value={tempUserName} onChange={e => setTempUserName(e.target.value)} style={inputStyle} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="savingsGoal" className="flex items-center gap-2"><Target className="h-4 w-4" /> Savings Goal</Label>
-              <Input id="savingsGoal" type="number" step="0.01" value={tempSavingsGoal} onChange={(e) => setTempSavingsGoal(e.target.value)} />
+            <div className="space-y-1.5">
+              <Label htmlFor="savingsGoal" style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "6px" }}>
+                <Target className="h-4 w-4" /> Savings Goal
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold font-mono pointer-events-none" style={{ color: "var(--fortress-steel)" }}>$</span>
+                <Input
+                  id="savingsGoal"
+                  type="number"
+                  step="0.01"
+                  value={tempSavingsGoal}
+                  onChange={e => setTempSavingsGoal(e.target.value)}
+                  className="pl-7 font-mono"
+                  style={inputStyle}
+                />
+              </div>
             </div>
-            {saveMessage && <p className={`text-sm font-medium ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{saveMessage.text}</p>}
-            <Button onClick={handleSave} className="w-full bg-slate-900" disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" /> {isSaving ? "Saving..." : "Save Settings"}
+
+            {saveMessage && (
+              <p
+                className="text-sm font-semibold"
+                style={{ color: saveMessage.type === "success" ? "var(--field-green)" : "var(--castle-red)" }}
+              >
+                {saveMessage.text}
+              </p>
+            )}
+
+            <Button
+              onClick={handleSave}
+              className="w-full font-bold text-white"
+              disabled={isSaving}
+              style={{
+                backgroundColor: "var(--castle-red)",
+                border: "none",
+                boxShadow: "0 2px 0 0 var(--castle-red-dark)",
+              }}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? "Saving…" : "Save Settings"}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Password Security */}
-        <Card className="border-slate-200">
+        {/* ── Security ─────────────────────────────────────────────────────────── */}
+        <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5" /> Security</CardTitle>
-            <CardDescription>Update your authentication credentials</CardDescription>
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Lock className="h-4 w-4" /> Security
+            </CardTitle>
+            <CardDescription style={{ color: "var(--fortress-steel)" }}>
+              Update your authentication credentials
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Input type="password" placeholder="Current Password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-            <Input type="password" placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            <Input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-            {passwordSuccess && <p className="text-sm text-green-600">{passwordSuccess}</p>}
-            <Button onClick={handleUpdatePassword} className="w-full border-slate-200" variant="outline" disabled={isUpdatingPassword}>
-              {isUpdatingPassword ? "Updating..." : "Update Password"}
+          <CardContent className="space-y-3">
+            <Input type="password" placeholder="Current Password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={inputStyle} />
+            <Input type="password" placeholder="New Password"     value={newPassword}     onChange={e => setNewPassword(e.target.value)}     style={inputStyle} />
+            <Input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} />
+
+            {passwordError   && <p className="text-xs font-semibold" style={{ color: "var(--castle-red)" }}>{passwordError}</p>}
+            {passwordSuccess && <p className="text-xs font-semibold" style={{ color: "var(--field-green)" }}>{passwordSuccess}</p>}
+
+            <Button
+              onClick={handleUpdatePassword}
+              variant="outline"
+              className="w-full font-bold"
+              disabled={isUpdatingPassword}
+              style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+            >
+              {isUpdatingPassword ? "Updating…" : "Update Password"}
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Archived Transactions Section */}
+      {/* ── Archived Transactions ─────────────────────────────────────────────── */}
       {archivedTransactions.length > 0 && (
-        <Card className="border-blue-100 bg-blue-50/30">
+        <Card className="border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface-raised)" }}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <Archive className="h-5 w-5 text-blue-600" /> 
+            <CardTitle
+              className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Archive className="h-4 w-4" style={{ color: "var(--engine-navy)" }} />
               Archived Transactions ({archivedTransactions.length})
             </CardTitle>
-            <CardDescription>
-              These transactions are hidden from your main list but still count in your analytics.
-              You can restore them or delete them permanently.
+            <CardDescription style={{ color: "var(--fortress-steel)" }}>
+              Hidden from your main list but still counted in analytics.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+            <div className="rounded-md border overflow-hidden" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    <TableHead className="font-semibold text-slate-900">Date</TableHead>
-                    <TableHead className="font-semibold text-slate-900">Description</TableHead>
-                    <TableHead className="font-semibold text-slate-900">Category</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-900">Amount</TableHead>
-                    <TableHead className="text-right font-semibold text-slate-900">Actions</TableHead>
+                  <TableRow style={{ backgroundColor: "var(--surface-raised)" }}>
+                    {["Date", "Description", "Category", "Amount", "Actions"].map((col, i) => (
+                      <TableHead
+                        key={col}
+                        className={`text-[10px] font-bold uppercase tracking-widest ${i >= 3 ? "text-right" : ""}`}
+                        style={{ color: "var(--fortress-steel)" }}
+                      >
+                        {col}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {archivedTransactions.map((transaction) => (
-                    <TableRow key={transaction.id} className="hover:bg-slate-50/50">
-                      <TableCell className="text-sm text-slate-600">
-                        {new Date(transaction.date).toLocaleDateString()}
+                  {archivedTransactions.map(t => (
+                    <TableRow key={t.id} style={{ borderColor: "var(--border-subtle)" }}>
+                      <TableCell className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>
+                        {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
                       </TableCell>
-                      <TableCell className="font-medium text-slate-900">
-                        {transaction.description}
+                      <TableCell className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+                        {t.description}
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                          {transaction.category}
+                        <span
+                          className="text-xs font-medium px-2 py-0.5 rounded"
+                          style={{ backgroundColor: "var(--surface-raised)", color: "var(--fortress-steel)", border: "1px solid var(--border-subtle)" }}
+                        >
+                          {t.category}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-900">
-                        ${transaction.amount.toFixed(2)}
+                      <TableCell className="text-right font-bold font-mono text-sm" style={{ color: "var(--fortress-steel)" }}>
+                        ${t.amount.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => handleRestoreTransaction(transaction)}
+                            variant="ghost" size="sm"
+                            className="h-8 text-xs font-bold gap-1"
+                            style={{ color: "var(--engine-navy)" }}
+                            onClick={() => handleRestoreTransaction(t)}
                           >
-                            <RotateCcw className="h-3 w-3 mr-1" />
-                            Restore
+                            <RotateCcw className="h-3 w-3" /> Restore
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDeleteTransactionPermanently(transaction)}
+                            variant="ghost" size="sm"
+                            className="h-8 text-xs font-bold gap-1"
+                            style={{ color: "var(--castle-red)" }}
+                            onClick={() => handleDeletePermanently(t)}
                           >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Delete
+                            <Trash2 className="h-3 w-3" /> Delete
                           </Button>
                         </div>
                       </TableCell>
@@ -357,39 +318,42 @@ export function SettingsPage({
               </Table>
             </div>
 
-            {/* Bulk Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            {/* Bulk actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
               <Button
                 variant="outline"
                 onClick={handleRestoreAll}
-                className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                className="flex-1 font-bold gap-2"
+                style={{ borderColor: "var(--engine-navy)", color: "var(--engine-navy)" }}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <RotateCcw className="h-4 w-4" />
                 Restore All ({archivedTransactions.length})
               </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
+                    className="flex-1 font-bold gap-2"
+                    style={{ borderColor: "var(--castle-red)", color: "var(--castle-red)" }}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-4 w-4" />
                     Delete All Permanently
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete All Archived Transactions?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all {archivedTransactions.length} archived transactions.
-                      This action cannot be undone.
+                    <AlertDialogTitle style={{ color: "var(--text-primary)" }}>Delete All Archived Transactions?</AlertDialogTitle>
+                    <AlertDialogDescription style={{ color: "var(--fortress-steel)" }}>
+                      This will permanently delete all {archivedTransactions.length} archived transactions. This cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeleteAllPermanently}
-                      className="bg-red-600 hover:bg-red-700"
+                      className="font-bold text-white"
+                      style={{ backgroundColor: "var(--castle-red)", border: "none" }}
                     >
                       Delete All Permanently
                     </AlertDialogAction>
@@ -401,45 +365,100 @@ export function SettingsPage({
         </Card>
       )}
 
-      {/* Legal & Compliance Section */}
-      <Card className="border-slate-200">
+      {/* ── Legal ─────────────────────────────────────────────────────────────── */}
+      <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-slate-600" /> Legal & Compliance</CardTitle>
-          <CardDescription>Review our terms and data protection policies</CardDescription>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
+            style={{ color: "var(--text-primary)" }}
+          >
+            <ShieldCheck className="h-4 w-4" style={{ color: "var(--fortress-steel)" }} />
+            Legal & Compliance
+          </CardTitle>
+          <CardDescription style={{ color: "var(--fortress-steel)" }}>
+            Review our terms and data protection policies
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button variant="outline" size="sm" onClick={() => onNavigate('privacy')} className="flex-1 border-slate-200 text-slate-600">View Privacy Policy</Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigate('terms')} className="flex-1 border-slate-200 text-slate-600">View Terms of Service</Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline" size="sm"
+              onClick={() => onNavigate("privacy")}
+              className="flex-1 font-bold uppercase tracking-wide text-xs"
+              style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+            >
+              Privacy Policy
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              onClick={() => onNavigate("terms")}
+              className="flex-1 font-bold uppercase tracking-wide text-xs"
+              style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+            >
+              Terms of Service
+            </Button>
           </div>
-          <div className="flex flex-col items-center justify-center w-full mt-12 pb-8 opacity-40">
-  <p className="text-[10px] font-mono text-gray-500 uppercase">
-    FORTIS_v{FORTIS_VERSION} // {GIT_HASH} // {LAST_DEPLOYED}
-  </p>
-</div>
+          <div className="flex flex-col items-center justify-center w-full pt-4 opacity-40">
+            <p className="text-[10px] font-mono uppercase" style={{ color: "var(--text-muted)" }}>
+              FORTIS_v{FORTIS_VERSION} // {GIT_HASH} // {LAST_DEPLOYED}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      <Card className="border-red-100 bg-red-50/30">
+      {/* ── Danger Zone ───────────────────────────────────────────────────────── */}
+      <Card
+        className="border"
+        style={{ borderColor: "var(--castle-red)", backgroundColor: "#FEF2F2" }}
+      >
         <CardHeader>
-          <CardTitle className="text-red-600 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle>
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
+            style={{ color: "var(--castle-red)" }}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            Danger Zone
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full sm:w-auto">Delete Account Permanently</Button>
+              <Button
+                className="font-bold text-white w-full sm:w-auto"
+                style={{ backgroundColor: "var(--castle-red)", border: "none", boxShadow: "0 2px 0 0 var(--castle-red-dark)" }}
+              >
+                Delete Account Permanently
+              </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>This will permanently erase your profile and all financial data.</AlertDialogDescription>
+                <AlertDialogTitle style={{ color: "var(--text-primary)" }}>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription style={{ color: "var(--fortress-steel)" }}>
+                  This will permanently erase your profile and all financial data. This cannot be undone.
+                </AlertDialogDescription>
               </AlertDialogHeader>
-              <Input type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} placeholder="Enter password to confirm" />
-              {deleteError && <p className="text-sm text-red-600 mt-2">{deleteError}</p>}
+              <Input
+                type="password"
+                placeholder="Enter password to confirm"
+                value={deletePassword}
+                onChange={e => setDeletePassword(e.target.value)}
+                style={inputStyle}
+              />
+              {deleteError && <p className="text-xs font-semibold mt-1" style={{ color: "var(--castle-red)" }}>{deleteError}</p>}
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setDeletePassword("")}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700">Delete Account</AlertDialogAction>
+                <AlertDialogCancel
+                  onClick={() => setDeletePassword("")}
+                  style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  className="font-bold text-white"
+                  style={{ backgroundColor: "var(--castle-red)", border: "none" }}
+                >
+                  Delete Account
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

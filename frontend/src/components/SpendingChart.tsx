@@ -1,13 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import type { Transaction } from "../App";
 
@@ -16,56 +10,53 @@ interface SpendingChartProps {
 }
 
 export function SpendingChart({ transactions }: SpendingChartProps) {
-  // Group transactions by date and calculate cumulative spending
-  const expenseTransactions = transactions
-    .filter((t) => t.type === "expense")
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const chartData = transactions
+    .filter(t => t.type === "expense")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .reduce((acc, t) => {
+      const date = new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const existing = acc.find(e => e.date === date);
+      if (existing) existing.amount += t.amount;
+      else acc.push({ date, amount: t.amount });
+      return acc;
+    }, [] as { date: string; amount: number }[]);
 
-  const chartData = expenseTransactions.reduce((acc, transaction) => {
-    const date = new Date(transaction.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    const existingEntry = acc.find((entry) => entry.date === date);
-    if (existingEntry) {
-      existingEntry.amount += transaction.amount;
-    } else {
-      acc.push({ date, amount: transaction.amount });
-    }
-    return acc;
-  }, [] as { date: string; amount: number }[]);
-
-  // Custom tooltip
-  const CustomTooltip = ({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: any[];
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 rounded-lg border shadow-lg">
-          <p className="font-medium text-gray-900">{payload[0].payload.date}</p>
-          <p className="text-sm text-gray-600">
-            Spent: ${payload[0].value.toFixed(2)}
-          </p>
-        </div>
-      );
-    }
-    return null;
+  // ── Custom tooltip ─────────────────────────────────────────────────────────
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div
+        className="rounded-md border p-3 text-sm"
+        style={{
+          backgroundColor: "var(--surface)",
+          borderColor:     "var(--border-subtle)",
+          boxShadow:       "0 4px 12px rgba(0,0,0,0.10)",
+        }}
+      >
+        <p className="font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+          {payload[0].payload.date}
+        </p>
+        <p style={{ color: "var(--fortress-steel)" }}>
+          Spent:{" "}
+          <span className="font-bold font-mono" style={{ color: "var(--castle-red)" }}>
+            ${payload[0].value.toFixed(2)}
+          </span>
+        </p>
+      </div>
+    );
   };
 
   if (chartData.length === 0) {
     return (
-      <Card>
+      <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
         <CardHeader>
-          <CardTitle>Spending Over Time</CardTitle>
+          <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
+            Spending Over Time
+          </CardTitle>
         </CardHeader>
         <CardContent className="py-12 text-center">
-          <p className="text-gray-500">
-            No expense data yet. Add some transactions to see your spending trends!
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            No expense data yet. Add some transactions to see your spending trends.
           </p>
         </CardContent>
       </Card>
@@ -73,40 +64,46 @@ export function SpendingChart({ transactions }: SpendingChartProps) {
   }
 
   return (
-    <Card>
+    <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
       <CardHeader>
-        <CardTitle>Spending Over Time</CardTitle>
+        <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: "var(--text-primary)" }}>
+          Spending Over Time
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div style={{ width: '100%', height: 300 }}>
-          <ResponsiveContainer>
+        <div style={{ width: "100%", height: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={chartData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 8, right: 24, left: 4, bottom: 4 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12, fill: "#666" }}
-                tickMargin={10}
-                stroke="#666"
+                tick={{ fontSize: 11, fill: "var(--fortress-steel)", fontFamily: "Inter, sans-serif" }}
+                axisLine={false}
+                tickLine={false}
+                dy={8}
               />
               <YAxis
-                tick={{ fontSize: 12, fill: "#666" }}
-                tickMargin={10}
-                tickFormatter={(value) => `${value}`}
-                stroke="#666"
+                tick={{ fontSize: 11, fill: "var(--fortress-steel)", fontFamily: "Inter, sans-serif" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={v => `$${v}`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              <Legend
+                wrapperStyle={{ fontSize: 11, color: "var(--fortress-steel)" }}
+                iconType="circle"
+              />
               <Line
                 type="monotone"
                 dataKey="amount"
-                stroke="#000000"
-                strokeWidth={2}
                 name="Spending"
-                dot={{ fill: "#000000", r: 4 }}
-                activeDot={{ r: 6 }}
+                stroke="#8B1219"
+                strokeWidth={2.5}
+                dot={{ fill: "#8B1219", r: 4, stroke: "var(--surface)", strokeWidth: 2 }}
+                activeDot={{ r: 5, fill: "#8B1219", stroke: "var(--surface)", strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
