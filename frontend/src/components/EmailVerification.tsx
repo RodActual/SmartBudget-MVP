@@ -35,7 +35,12 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     if (!user) { setError("No user logged in"); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      await sendEmailVerification(user, { url: window.location.origin, handleCodeInApp: false });
+      // NOTE: Ensure your Firebase Console -> Auth -> Settings -> Authorized Domains 
+      // includes your production URL for this redirect to work.
+      await sendEmailVerification(user, { 
+        url: window.location.origin, 
+        handleCodeInApp: false 
+      });
       setEmailSent(true);
       setSuccess("Verification email sent! Please check your inbox.");
       setCooldown(60);
@@ -71,7 +76,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
 
   if (!user) return null;
 
-  // ── Already verified ──────────────────────────────────────────────────────
   if (user.emailVerified) {
     return (
       <Alert
@@ -89,7 +93,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     );
   }
 
-  // ── Pending verification ──────────────────────────────────────────────────
   return (
     <Card
       className="border-2"
@@ -111,7 +114,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Email info strip */}
         <div
           className="rounded-md p-4 border"
           style={{ backgroundColor: "#FFFBEB", borderColor: "#FDE68A" }}
@@ -124,7 +126,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
           </p>
         </div>
 
-        {/* Error */}
         {error && (
           <Alert
             className="border rounded-md"
@@ -136,7 +137,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
           </Alert>
         )}
 
-        {/* Success */}
         {success && (
           <Alert
             className="border rounded-md"
@@ -148,7 +148,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
           </Alert>
         )}
 
-        {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
             onClick={handleSendVerification}
@@ -187,7 +186,6 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
           )}
         </div>
 
-        {/* Tips */}
         <div className="text-xs space-y-1" style={{ color: "var(--text-muted)" }}>
           <p className="font-bold uppercase tracking-wide" style={{ color: "var(--fortress-steel)" }}>Tips:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">

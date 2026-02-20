@@ -6,7 +6,7 @@ import {
   orderBy, limit, writeBatch 
 } from "firebase/firestore";
 import type { Transaction, Budget } from "../App";
-import { isCurrentMonth } from "../utils/dateUtils"; // ✅ NEW: Import date utility
+import { isCurrentMonth } from "../utils/dateUtils";
 
 export function useFinancialData(user: any) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -48,18 +48,17 @@ export function useFinancialData(user: any) {
     };
   }, [user]);
 
-  // 2. Calculated State (Memoized) - ✅ FIXED: Use date utility for month check
+  // 2. Calculated State (Memoized)
   const currentBudgets = useMemo(() => {
     return budgets.map((budget) => {
-      // Calculate spent for this specific budget category in the current month
       const spent = transactions
         .filter((t) => {
           return (
             t.category === budget.category &&
             t.type === "expense" &&
             t.date && 
-            !t.archived && // Respect soft delete
-            isCurrentMonth(t.date) // ✅ FIXED: Simple, reliable month check
+            !t.archived && 
+            isCurrentMonth(t.date)
           );
         })
         .reduce((sum, t) => sum + t.amount, 0);
@@ -82,42 +81,36 @@ export function useFinancialData(user: any) {
     await deleteDoc(doc(db, "transactions", id));
   };
 
-  // INTEGRITY FIX: Use Atomic Batch instead of Loop
   const updateBudgets = async (newBudgets: Budget[]) => {
     if (!user) return;
     
     try {
       const batch = writeBatch(db);
       
-      // Get existing budgets to determine what to delete
       const snapshot = await getDocs(query(collection(db, "budgets"), where("userId", "==", user.uid)));
       const existingIds = snapshot.docs.map(d => d.id);
       const newIds = newBudgets.map(b => b.id).filter(Boolean) as string[];
 
-      // 1. Identify budgets to delete (existing but not in new list)
+      // 1. Delete removed budgets
       const idsToDelete = existingIds.filter(id => !newIds.includes(id));
       idsToDelete.forEach(id => {
         const ref = doc(db, "budgets", id);
         batch.delete(ref);
       });
 
-      // 2. Identify budgets to update or create
+      // 2. Update or Create
       for (const b of newBudgets) {
-        // Ensure userId is attached for security rules
         const data = { ...b, userId: user.uid }; 
         
         if (b.id && existingIds.includes(b.id)) {
-          // Update existing
           const ref = doc(db, "budgets", b.id);
           batch.update(ref, data);
         } else {
-          // Create new
-          const ref = doc(collection(db, "budgets")); // Auto-ID
+          const ref = doc(collection(db, "budgets"));
           batch.set(ref, data);
         }
       }
 
-      // 3. Commit all changes atomically
       await batch.commit();
       
     } catch (error) {
