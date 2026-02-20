@@ -35,11 +35,11 @@ dismissedAlertIds:       [] as string[],
 
 export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) {
 const [isSignUp, setIsSignUp]               = useState(initialIsSignUp);
-const [email, setEmail]                     = useState(””);
-const [password, setPassword]               = useState(””);
-const [confirmPassword, setConfirmPassword] = useState(””);
-const [error, setError]                     = useState(””);
-const [successMessage, setSuccessMessage]   = useState(””);
+const [email, setEmail]                     = useState("");
+const [password, setPassword]               = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
+const [error, setError]                     = useState("");
+const [successMessage, setSuccessMessage]   = useState("");
 const [loading, setLoading]                 = useState(false);
 
 useEffect(() => { setIsSignUp(initialIsSignUp); }, [initialIsSignUp]);
@@ -47,7 +47,7 @@ useEffect(() => { setIsSignUp(initialIsSignUp); }, [initialIsSignUp]);
 const handleAuth = async (e: React.FormEvent) => {
 e.preventDefault();
 setError(””);
-setSuccessMessage(””);
+setSuccessMessage("");
 setLoading(true);
 
 ```
