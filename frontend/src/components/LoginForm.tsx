@@ -1,22 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from “react”;
 import {
 signInWithEmailAndPassword,
 createUserWithEmailAndPassword,
 GoogleAuthProvider,
 signInWithPopup,
 sendEmailVerification,
-} from "firebase/auth";
-import { auth, db } from "../firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+} from “firebase/auth”;
+import { auth, db } from “../firebase”;
+import { doc, setDoc, getDoc } from “firebase/firestore”;
+import { Button } from “../ui/button”;
+import { Input } from “../ui/input”;
+import { Label } from “../ui/label”;
 import {
 Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-} from "../ui/card";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { FortisLogo } from "./FortisLogo";
+} from “../ui/card”;
+import { Alert, AlertDescription, AlertTitle } from “../ui/alert”;
+import { AlertCircle, CheckCircle2 } from “lucide-react”;
+import { FortisLogo } from “./FortisLogo”;
 
 interface LoginFormProps {
 onLogin: () => void;
@@ -35,11 +35,11 @@ dismissedAlertIds:       [] as string[],
 
 export function LoginForm({ onLogin, initialIsSignUp = false }: LoginFormProps) {
 const [isSignUp, setIsSignUp]               = useState(initialIsSignUp);
-const [email, setEmail]                     = useState("");
-const [password, setPassword]               = useState("");
-const [confirmPassword, setConfirmPassword] = useState("");
-const [error, setError]                     = useState("");
-const [successMessage, setSuccessMessage]   = useState("");
+const [email, setEmail]                     = useState(””);
+const [password, setPassword]               = useState(””);
+const [confirmPassword, setConfirmPassword] = useState(””);
+const [error, setError]                     = useState(””);
+const [successMessage, setSuccessMessage]   = useState(””);
 const [loading, setLoading]                 = useState(false);
 
 useEffect(() => { setIsSignUp(initialIsSignUp); }, [initialIsSignUp]);
@@ -47,7 +47,7 @@ useEffect(() => { setIsSignUp(initialIsSignUp); }, [initialIsSignUp]);
 const handleAuth = async (e: React.FormEvent) => {
 e.preventDefault();
 setError(””);
-setSuccessMessage("");
+setSuccessMessage(””);
 setLoading(true);
 
 ```
