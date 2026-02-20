@@ -6,17 +6,17 @@ GoogleAuthProvider,
 signInWithPopup,
 sendEmailVerification,
 } from "firebase/auth";
-import { auth, db } from “../firebase”;
+import { auth, db } from "../firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { Button } from “../ui/button”;
-import { Input } from “../ui/input”;
-import { Label } from “../ui/label”;
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import {
 Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-} from “../ui/card”;
-import { Alert, AlertDescription, AlertTitle } from “../ui/alert”;
-import { AlertCircle, CheckCircle2 } from “lucide-react”;
-import { FortisLogo } from “./FortisLogo”;
+} from "../ui/card";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { FortisLogo } from "./FortisLogo";
 
 interface LoginFormProps {
 onLogin: () => void;
