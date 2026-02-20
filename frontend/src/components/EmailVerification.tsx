@@ -4,7 +4,7 @@ import { sendEmailVerification, reload, applyActionCode } from "firebase/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Mail, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Mail, CheckCircle, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
 
 interface EmailVerificationProps {
   onVerified?: () => void;
@@ -17,6 +17,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
   const [loading, setLoading]       = useState(false);
   const [checking, setChecking]     = useState(false);
   const [cooldown, setCooldown]     = useState(0);
+  const [linkVerified, setLinkVerified] = useState(false);
 
   const user = auth.currentUser;
 
@@ -27,21 +28,20 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
       const oobCode = params.get("oobCode");
       const mode = params.get("mode");
 
-      // If we have a code and we're in verify mode, apply it
       if (oobCode && mode === "verifyEmail") {
         setChecking(true);
         try {
           await applyActionCode(auth, oobCode);
-          setSuccess("Email verified successfully! Redirecting...");
+          setLinkVerified(true);
+          setSuccess("Email verified successfully!");
           
-          // Force a reload of the user object to update emailVerified status
           if (user) await reload(user);
           
-          // Clean up the URL and notify the app
-          setTimeout(() => {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            if (onVerified) onVerified();
-          }, 2000);
+          // Notify parent app if callback exists
+          if (onVerified) onVerified();
+          
+          // Clean up URL without refreshing
+          window.history.replaceState({}, document.title, window.location.pathname);
         } catch (err: any) {
           setError("The verification link is invalid or has expired.");
         } finally {
@@ -62,14 +62,13 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
   }, [cooldown]);
 
   useEffect(() => {
-    if (user?.emailVerified && onVerified) onVerified();
-  }, [user?.emailVerified, onVerified]);
+    if (user?.emailVerified && !linkVerified && onVerified) onVerified();
+  }, [user?.emailVerified, linkVerified, onVerified]);
 
   const handleSendVerification = async () => {
     if (!user) { setError("No user logged in"); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      // Ensure Authorized Domains includes fortisbudget.com
       await sendEmailVerification(user, { 
         url: `${window.location.origin}/verify`, 
         handleCodeInApp: true 
@@ -107,10 +106,40 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     }
   };
 
-  if (!user) return null;
+  // ── 3. Render: Success State (Link Processed) ──────────────────────────
+  // This shows on the FortisBudget.com/verify page specifically
+  if (linkVerified) {
+    return (
+      <Card className="border-2 shadow-xl p-2" style={{ borderColor: "var(--field-green)", backgroundColor: "var(--surface)" }}>
+        <CardContent className="pt-8 pb-6 flex flex-col items-center text-center space-y-6">
+          <div className="bg-green-100 p-4 rounded-full">
+            <CheckCircle className="h-12 w-12" style={{ color: "var(--field-green)" }} />
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+              Verification Successful
+            </CardTitle>
+            <CardDescription className="text-base" style={{ color: "var(--fortress-steel)" }}>
+              Your email has been confirmed. You can now close this window and return to your original tab to continue.
+            </CardDescription>
+          </div>
+          <Button 
+            className="w-full font-bold text-white shadow-md"
+            onClick={() => window.location.href = "/"}
+            style={{ backgroundColor: "var(--engine-navy)" }}
+          >
+            Or, Continue Here
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  // ── 3. Render: Success State ───────────────────────────────────────────
-  if (user.emailVerified) {
+  // If no user and we aren't currently processing a link, we can't show the re-send UI
+  if (!user && !checking) return null;
+
+  // ── 4. Render: Already Verified Banner ────────────────────────────────
+  if (user?.emailVerified) {
     return (
       <div className="space-y-4 w-full max-w-md mx-auto">
         <Alert
@@ -125,9 +154,8 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
             Your email has been verified. You now have full access to FortisBudget.
           </AlertDescription>
         </Alert>
-        
         <Button 
-          className="w-full font-bold text-white shadow-md hover:-translate-y-0.5 transition-transform"
+          className="w-full font-bold text-white shadow-md"
           onClick={() => window.location.href = "/"}
           style={{ backgroundColor: "var(--engine-navy)" }}
         >
@@ -137,7 +165,7 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
     );
   }
 
-  // ── 4. Render: Verification Pending ────────────────────────────────────
+  // ── 5. Render: Verification Pending UI ────────────────────────────────
   return (
     <Card
       className="border-2 shadow-lg"
@@ -150,73 +178,68 @@ export function EmailVerification({ onVerified }: EmailVerificationProps) {
             className="text-sm font-bold uppercase tracking-widest"
             style={{ color: "var(--text-primary)" }}
           >
-            {checking ? "Verifying..." : "Verify Your Email"}
+            {checking ? "Processing Code..." : "Verify Your Email"}
           </CardTitle>
         </div>
         <CardDescription style={{ color: "var(--fortress-steel)" }}>
-          {checking ? "Please wait while we confirm your code." : "Please verify your email address to access all features"}
+          {checking ? "Validating your credentials with Firebase..." : "Please verify your email address to access all features"}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div
-          className="rounded-md p-4 border"
-          style={{ backgroundColor: "#FFFBEB", borderColor: "#FDE68A" }}
-        >
-          <p className="text-sm font-semibold" style={{ color: "#78350F" }}>
-            Email: <span className="font-mono">{user.email}</span>
-          </p>
-        </div>
+        {!checking && user && (
+          <div className="rounded-md p-4 border" style={{ backgroundColor: "#FFFBEB", borderColor: "#FDE68A" }}>
+            <p className="text-sm font-semibold" style={{ color: "#78350F" }}>
+              Email: <span className="font-mono">{user.email}</span>
+            </p>
+          </div>
+        )}
 
         {error && (
-          <Alert
-            className="border rounded-md"
-            style={{ backgroundColor: "#FEF2F2", borderColor: "var(--castle-red)" }}
-          >
+          <Alert className="border rounded-md" style={{ backgroundColor: "#FEF2F2", borderColor: "var(--castle-red)" }}>
             <AlertCircle className="h-4 w-4" style={{ color: "var(--castle-red)" }} />
             <AlertTitle className="font-bold text-xs uppercase tracking-wide" style={{ color: "#7F1D1D" }}>Error</AlertTitle>
             <AlertDescription className="text-xs" style={{ color: "#7F1D1D" }}>{error}</AlertDescription>
           </Alert>
         )}
 
-        {success && (
-          <Alert
-            className="border rounded-md"
-            style={{ backgroundColor: "#F0FDF4", borderColor: "var(--field-green)" }}
-          >
+        {success && !linkVerified && (
+          <Alert className="border rounded-md" style={{ backgroundColor: "#F0FDF4", borderColor: "var(--field-green)" }}>
             <CheckCircle className="h-4 w-4" style={{ color: "var(--field-green)" }} />
             <AlertTitle className="font-bold text-xs uppercase tracking-wide" style={{ color: "#14532D" }}>Success</AlertTitle>
             <AlertDescription className="text-xs" style={{ color: "#14532D" }}>{success}</AlertDescription>
           </Alert>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            onClick={handleSendVerification}
-            disabled={loading || checking || cooldown > 0}
-            className="flex-1 font-bold text-white"
-            style={{
-              backgroundColor: "var(--castle-red)",
-              border: "none",
-              boxShadow: "0 2px 0 0 var(--castle-red-dark)",
-            }}
-          >
-            {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
-            {cooldown > 0 ? `Resend in ${cooldown}s` : "Send Verification Email"}
-          </Button>
-
-          {emailSent && !checking && (
+        {!checking && (
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
-              onClick={handleCheckVerification}
-              disabled={checking}
-              variant="outline"
-              className="flex-1 font-bold gap-2"
-              style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+              onClick={handleSendVerification}
+              disabled={loading || cooldown > 0}
+              className="flex-1 font-bold text-white"
+              style={{
+                backgroundColor: "var(--castle-red)",
+                border: "none",
+                boxShadow: "0 2px 0 0 var(--castle-red-dark)",
+              }}
             >
-              <CheckCircle className="h-4 w-4" /> I've Verified My Email
+              {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
+              {cooldown > 0 ? `Resend in ${cooldown}s` : "Send Verification Email"}
             </Button>
-          )}
-        </div>
+
+            {emailSent && (
+              <Button
+                onClick={handleCheckVerification}
+                disabled={checking}
+                variant="outline"
+                className="flex-1 font-bold gap-2"
+                style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}
+              >
+                <CheckCircle className="h-4 w-4" /> I've Verified My Email
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
