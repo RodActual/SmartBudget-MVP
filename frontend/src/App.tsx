@@ -186,6 +186,7 @@ export default function App() {
       const uid = user.uid;
       const tSnaps = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
       const bSnaps = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
+      const sSnaps = await getDocs(query(collection(db, "savingsBuckets"), where("userId", "==", uid)));
       const batch = writeBatch(db);
       tSnaps.docs.forEach(d => batch.delete(d.ref));
       bSnaps.docs.forEach(d => batch.delete(d.ref));
