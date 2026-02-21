@@ -7,16 +7,15 @@ import {
 } from "firebase/firestore";
 import type { Transaction, Budget } from "../App";
 import { isCurrentMonth } from "../utils/dateUtils";
-// Import the Vault type we defined in shieldLogic
 import type { SavingsVault } from "../utils/shieldLogic"; 
 
 export function useFinancialData(user: any) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [savingsBuckets, setSavingsBuckets] = useState<SavingsVault[]>([]); // <-- Added
+  const [savingsBuckets, setSavingsBuckets] = useState<SavingsVault[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Data with Performance Limits
+  // ─── 1. FETCH DATA (LISTENERS) ─────────────────────────────────────────────
   useEffect(() => {
     if (!user || !user.emailVerified) {
       setLoading(false);
@@ -41,8 +40,7 @@ export function useFinancialData(user: any) {
     );
 
     const unsubTrans = onSnapshot(qTransactions, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
-      setTransactions(data);
+      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction)));
     });
 
     const unsubBudgets = onSnapshot(qBudgets, (snap) => {
@@ -61,7 +59,7 @@ export function useFinancialData(user: any) {
     };
   }, [user]);
 
-  // 2. Calculated State (Memoized)
+  // ─── 2. CALCULATED STATE (MEMOIZED) ────────────────────────────────────────
   const currentBudgets = useMemo(() => {
     return budgets.map((budget) => {
       const spent = transactions
@@ -80,7 +78,7 @@ export function useFinancialData(user: any) {
     });
   }, [budgets, transactions]);
 
-  // 3. Handlers
+  // ─── 3. TRANSACTION HANDLERS ───────────────────────────────────────────────
   const addTransaction = async (t: Omit<Transaction, "id">) => {
     if (!user) return;
     await addDoc(collection(db, "transactions"), { ...t, userId: user.uid });
@@ -94,6 +92,7 @@ export function useFinancialData(user: any) {
     await deleteDoc(doc(db, "transactions", id));
   };
 
+  // ─── 4. BUDGET HANDLERS ────────────────────────────────────────────────────
   const updateBudgets = async (newBudgets: Budget[]) => {
     if (!user) return;
     try {
@@ -120,15 +119,34 @@ export function useFinancialData(user: any) {
     }
   };
 
+  // ─── 5. VAULT (SHIELD) HANDLERS ────────────────────────────────────────────
+  const addVault = async (vault: Omit<SavingsVault, "id">) => {
+    if (!user) return;
+    await addDoc(collection(db, "savingsBuckets"), { ...vault, userId: user.uid });
+  };
+
+  const updateVault = async (id: string, updates: Partial<SavingsVault>) => {
+    if (!user) return;
+    await updateDoc(doc(db, "savingsBuckets", id), updates);
+  };
+
+  const deleteVault = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, "savingsBuckets", id));
+  };
+
   return {
     transactions,
     budgets,
     currentBudgets,
-    savingsBuckets, // <-- Exported for UI
+    savingsBuckets,
     loading,
     addTransaction,
     updateTransaction,
     deleteTransaction,
     updateBudgets,
+    addVault,         // <-- Exported for UI
+    updateVault,      // <-- Exported for UI
+    deleteVault,      // <-- Exported for UI
   };
 }

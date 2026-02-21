@@ -1,9 +1,9 @@
 import React from "react";
 
-export function FortisLogo({ className = "h-12 w-auto" }: { className?: string }) {
+export function FortisLogo({ className = "h-12 w-auto", iconOnly = false }: { className?: string; iconOnly?: boolean }) {
   return (
     <svg 
-      viewBox="0 0 300 100" 
+      viewBox={iconOnly ? "0 0 80 100" : "0 0 300 100"}
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
       className={className}

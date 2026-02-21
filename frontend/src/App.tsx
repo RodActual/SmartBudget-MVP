@@ -96,8 +96,9 @@ export default function App() {
 
   // --- 3. CUSTOM HOOKS ---
   const { 
-    transactions, budgets, currentBudgets, loading: dataLoading, 
-    addTransaction, updateTransaction, deleteTransaction, updateBudgets 
+    transactions, budgets, currentBudgets, savingsBuckets, loading: dataLoading, 
+    addTransaction, updateTransaction, deleteTransaction, updateBudgets,
+    addVault, updateVault, deleteVault
   } = useFinancialData(user);
 
   const { showWarning, continueSession, logout } = useInactivity(user);
@@ -292,7 +293,7 @@ export default function App() {
             }}
           >
             <div className="flex items-center gap-3">
-              <FortisLogo className="h-8 w-8" />
+              <FortisLogo className="h-8 w-8" iconOnly />
               <div>
                 <h1 className="text-base font-bold tracking-widest uppercase text-white">
                   FortisBudget
@@ -426,6 +427,10 @@ export default function App() {
                       <SettingsPage 
                         budgets={budgets} 
                         transactions={transactions}
+                        savingsBuckets={savingsBuckets}      
+                        onAddVault={addVault}                
+                        onUpdateVault={updateVault}          
+                        onDeleteVault={deleteVault}          
                         onUpdateTransaction={handleUpdateTransactionForArchive}
                         onDeleteTransaction={handleDeleteTransactionPermanently}
                         onNavigate={setAuthMode}

@@ -1,22 +1,16 @@
 import { useState, useEffect } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
 } from "../ui/select";
+import { MoneyInput } from "./MoneyInput";
 import type { Transaction, Budget } from "../App";
 import { parseDateInput, formatDateForInput } from "../utils/dateUtils";
 
@@ -29,6 +23,19 @@ interface AddTransactionDialogProps {
   budgets: Budget[];
 }
 
+const labelStyle: React.CSSProperties = {
+  color:         "var(--text-primary)",
+  fontWeight:    600,
+  fontSize:      "0.8125rem",
+  letterSpacing: "0.01em",
+};
+
+const inputStyle: React.CSSProperties = {
+  backgroundColor: "var(--surface-raised)",
+  borderColor:     "var(--border-subtle)",
+  color:           "var(--text-primary)",
+};
+
 export function AddTransactionDialog({
   open,
   onOpenChange,
@@ -38,7 +45,7 @@ export function AddTransactionDialog({
   budgets,
 }: AddTransactionDialogProps) {
   const [description, setDescription] = useState("");
-  const [amount, setAmount]           = useState("");
+  const [amount, setAmount]           = useState<number>(0);
   const [category, setCategory]       = useState("");
   const [type, setType]               = useState<"income" | "expense">("expense");
   const [date, setDate]               = useState(formatDateForInput(new Date()));
@@ -46,13 +53,13 @@ export function AddTransactionDialog({
   useEffect(() => {
     if (editingTransaction) {
       setDescription(editingTransaction.description);
-      setAmount(editingTransaction.amount.toString());
+      setAmount(editingTransaction.amount);
       setCategory(editingTransaction.category);
       setType(editingTransaction.type);
       setDate(formatDateForInput(editingTransaction.date));
     } else {
       setDescription("");
-      setAmount("");
+      setAmount(0);
       setCategory("");
       setType("expense");
       setDate(formatDateForInput(new Date()));
@@ -67,7 +74,7 @@ export function AddTransactionDialog({
       date: parseDateInput(date),
       description,
       category,
-      amount: parseFloat(amount),
+      amount,
       type,
     };
 
@@ -76,7 +83,7 @@ export function AddTransactionDialog({
     } else {
       onAddTransaction(transactionData);
       setDescription("");
-      setAmount("");
+      setAmount(0);
       setCategory("");
     }
   };
@@ -86,14 +93,6 @@ export function AddTransactionDialog({
     "Income",
     "Other",
   ]));
-
-  // ── Label style ────────────────────────────────────────────────────────────
-  const labelStyle: React.CSSProperties = {
-    color: "var(--text-primary)",
-    fontWeight: 600,
-    fontSize: "0.8125rem",
-    letterSpacing: "0.01em",
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,6 +116,7 @@ export function AddTransactionDialog({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+
             {/* Date */}
             <div className="grid gap-1.5">
               <Label htmlFor="date" style={labelStyle}>Date</Label>
@@ -124,14 +124,9 @@ export function AddTransactionDialog({
                 id="date"
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={e => setDate(e.target.value)}
                 required
-                style={{
-                  backgroundColor: "var(--surface-raised)",
-                  borderColor: "var(--border-subtle)",
-                  color: "var(--text-primary)",
-                  fontFamily: "var(--font-mono)",
-                }}
+                style={{ ...inputStyle, fontFamily: "var(--font-mono)" }}
               />
             </div>
 
@@ -142,13 +137,9 @@ export function AddTransactionDialog({
                 id="description"
                 placeholder="Enter description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={e => setDescription(e.target.value)}
                 required
-                style={{
-                  backgroundColor: "var(--surface-raised)",
-                  borderColor: "var(--border-subtle)",
-                  color: "var(--text-primary)",
-                }}
+                style={inputStyle}
               />
             </div>
 
@@ -159,15 +150,14 @@ export function AddTransactionDialog({
                 <SelectTrigger
                   id="category"
                   style={{
-                    backgroundColor: "var(--surface-raised)",
-                    borderColor: "var(--border-subtle)",
+                    ...inputStyle,
                     color: category ? "var(--text-primary)" : "var(--text-muted)",
                   }}
                 >
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
-                  {uniqueCategories.map((cat) => (
+                  {uniqueCategories.map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
@@ -181,9 +171,8 @@ export function AddTransactionDialog({
                 <SelectTrigger
                   id="type"
                   style={{
-                    backgroundColor: "var(--surface-raised)",
-                    borderColor: "var(--border-subtle)",
-                    color: type === "income" ? "var(--field-green)" : "var(--castle-red)",
+                    ...inputStyle,
+                    color:      type === "income" ? "var(--field-green)" : "var(--castle-red)",
                     fontWeight: 600,
                   }}
                 >
@@ -200,32 +189,16 @@ export function AddTransactionDialog({
               </Select>
             </div>
 
-            {/* Amount */}
+            {/* Amount — MoneyInput handles $ alignment + blur formatting */}
             <div className="grid gap-1.5">
               <Label htmlFor="amount" style={labelStyle}>Amount</Label>
-              <div className="relative">
-                <span
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold font-mono pointer-events-none"
-                  style={{ color: "var(--fortress-steel)" }}
-                >
-                  $
-                </span>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="pl-7 font-mono"
-                  style={{
-                    backgroundColor: "var(--surface-raised)",
-                    borderColor: "var(--border-subtle)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-              </div>
+              <MoneyInput
+                id="amount"
+                value={amount}
+                onChange={setAmount}
+                placeholder="0.00"
+                required
+              />
             </div>
           </div>
 
@@ -235,8 +208,8 @@ export function AddTransactionDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               style={{
-                borderColor: "var(--border-subtle)",
-                color: "var(--fortress-steel)",
+                borderColor:     "var(--border-subtle)",
+                color:           "var(--fortress-steel)",
                 backgroundColor: "transparent",
               }}
             >
@@ -247,8 +220,8 @@ export function AddTransactionDialog({
               className="font-bold tracking-wide text-white"
               style={{
                 backgroundColor: "var(--castle-red)",
-                boxShadow: "0 2px 0 0 var(--castle-red-dark)",
-                border: "none",
+                boxShadow:       "0 2px 0 0 var(--castle-red-dark)",
+                border:          "none",
               }}
             >
               {editingTransaction ? "Update" : "Log"} Transaction
