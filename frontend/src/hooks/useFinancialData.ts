@@ -7,10 +7,13 @@ import {
 } from "firebase/firestore";
 import type { Transaction, Budget } from "../App";
 import { isCurrentMonth } from "../utils/dateUtils";
+// Import the Vault type we defined in shieldLogic
+import type { SavingsVault } from "../utils/shieldLogic"; 
 
 export function useFinancialData(user: any) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [savingsBuckets, setSavingsBuckets] = useState<SavingsVault[]>([]); // <-- Added
   const [loading, setLoading] = useState(true);
 
   // 1. Fetch Data with Performance Limits
@@ -32,6 +35,11 @@ export function useFinancialData(user: any) {
       where("userId", "==", user.uid)
     );
 
+    const qVaults = query(
+      collection(db, "savingsBuckets"), 
+      where("userId", "==", user.uid)
+    );
+
     const unsubTrans = onSnapshot(qTransactions, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Transaction));
       setTransactions(data);
@@ -39,12 +47,17 @@ export function useFinancialData(user: any) {
 
     const unsubBudgets = onSnapshot(qBudgets, (snap) => {
       setBudgets(snap.docs.map(d => ({ id: d.id, ...d.data() } as Budget)));
+    });
+
+    const unsubVaults = onSnapshot(qVaults, (snap) => {
+      setSavingsBuckets(snap.docs.map(d => ({ id: d.id, ...d.data() } as SavingsVault)));
       setLoading(false);
     });
 
     return () => {
       unsubTrans();
       unsubBudgets();
+      unsubVaults();
     };
   }, [user]);
 
@@ -83,36 +96,24 @@ export function useFinancialData(user: any) {
 
   const updateBudgets = async (newBudgets: Budget[]) => {
     if (!user) return;
-    
     try {
       const batch = writeBatch(db);
-      
       const snapshot = await getDocs(query(collection(db, "budgets"), where("userId", "==", user.uid)));
       const existingIds = snapshot.docs.map(d => d.id);
       const newIds = newBudgets.map(b => b.id).filter(Boolean) as string[];
 
-      // 1. Delete removed budgets
       const idsToDelete = existingIds.filter(id => !newIds.includes(id));
-      idsToDelete.forEach(id => {
-        const ref = doc(db, "budgets", id);
-        batch.delete(ref);
-      });
+      idsToDelete.forEach(id => batch.delete(doc(db, "budgets", id)));
 
-      // 2. Update or Create
       for (const b of newBudgets) {
         const data = { ...b, userId: user.uid }; 
-        
         if (b.id && existingIds.includes(b.id)) {
-          const ref = doc(db, "budgets", b.id);
-          batch.update(ref, data);
+          batch.update(doc(db, "budgets", b.id), data);
         } else {
-          const ref = doc(collection(db, "budgets"));
-          batch.set(ref, data);
+          batch.set(doc(collection(db, "budgets")), data);
         }
       }
-
       await batch.commit();
-      
     } catch (error) {
       console.error("Failed to batch update budgets:", error);
       alert("Failed to save changes. Please try again.");
@@ -123,6 +124,7 @@ export function useFinancialData(user: any) {
     transactions,
     budgets,
     currentBudgets,
+    savingsBuckets, // <-- Exported for UI
     loading,
     addTransaction,
     updateTransaction,

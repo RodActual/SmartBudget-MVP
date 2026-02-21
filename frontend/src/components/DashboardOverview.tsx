@@ -1,14 +1,16 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Plus, TrendingDown, TrendingUp, Wallet, Target } from "lucide-react";
+import { Plus, TrendingDown, TrendingUp, Wallet, Target, ShieldCheck } from "lucide-react";
 import type { Budget, Transaction } from "../App";
 import { DailyTipCard } from "./DailyTipCard";
 import { useUserSettings } from "../hooks/useUserSettings";
+import { partitionIncome } from "../utils/shieldLogic";
 
 interface DashboardOverviewProps {
   budgets: Budget[];
   transactions: Transaction[];
+  savingsBuckets?: any[];
   onOpenAddTransaction: () => void;
 }
 
@@ -57,9 +59,19 @@ function getBudgetTier(spent: number, budgeted: number): {
 export function DashboardOverview({
   budgets,
   transactions,
+  savingsBuckets = [],
   onOpenAddTransaction,
 }: DashboardOverviewProps) {
-  const { userName, savingsGoal } = useUserSettings();
+  const { userName, monthlyIncome, savingsGoal } = useUserSettings();
+
+  // ─── SHIELD LOGIC ENGINE ───────────────────────────────────────────────────
+  const shieldData = useMemo(() => {
+    const activeVaults = savingsBuckets.length > 0 
+      ? savingsBuckets 
+      : [{ id: "default", name: "Base Shield", monthlyTarget: savingsGoal, currentBalance: 0, ceilingAmount: null }];
+      
+    return partitionIncome(monthlyIncome, activeVaults);
+  }, [monthlyIncome, savingsGoal, savingsBuckets]);
 
   const financialTotals = useMemo(() => {
     const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
@@ -84,6 +96,15 @@ export function DashboardOverview({
   // ─── Summary card definitions ──────────────────────────────────────────────
   const summaryCards = [
     {
+      title: "Net Balance",
+      value: `$${totalBalance.toFixed(2)}`,
+      sub: "Income vs Expenses",
+      icon: Wallet,
+      iconColor: "var(--engine-navy)",
+      iconBg: "var(--surface-raised)",
+      valueColor: totalBalance >= 0 ? "var(--field-green)" : "var(--castle-red)",
+    },
+    {
       title: "Total Income",
       value: `$${totalIncome.toFixed(2)}`,
       sub: "All-time earnings",
@@ -105,64 +126,55 @@ export function DashboardOverview({
       title: "Available Budget",
       value: `$${remainingBudget.toFixed(2)}`,
       sub: "Remaining to spend",
-      icon: Wallet,
+      icon: Target,
       iconColor: remainingBudget < 0 ? "var(--castle-red)" : "var(--fortress-steel)",
       iconBg: remainingBudget < 0 ? "#FEE2E2" : "var(--surface-raised)",
       valueColor: remainingBudget < 0 ? "var(--castle-red)" : "var(--text-primary)",
-    },
-    {
-      title: "Savings Progress",
-      value: `$${savings.toFixed(2)}`,
-      sub: savingsGoal > 0
-        ? `${Math.min(((savings / savingsGoal) * 100), 100).toFixed(0)}% of $${savingsGoal.toFixed(2)} goal`
-        : "Set a goal in Settings",
-      icon: Target,
-      iconColor: "var(--engine-navy)",
-      iconBg: "#DBEAFE",
-      valueColor: "var(--engine-navy)",
     },
   ];
 
   return (
     <div className="space-y-6">
 
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      {/* ── Page Header & Shield Visualizer ─────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row items-start justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
             Welcome back, <span style={{ color: 'var(--castle-red)' }}>{userName}</span>
           </h1>
           <p className="mt-1 text-sm font-medium" style={{ color: 'var(--fortress-steel)' }}>
-            Here's your financial situation report.
+            Fortress operational. Your vault is secure.
           </p>
         </div>
 
-        {/* Balance Badge */}
+        {/* The Partition HUD */}
         <div 
-          className="text-right px-4 py-2 rounded-lg border"
-          style={{ 
-            backgroundColor: 'var(--surface)',
-            borderColor: 'var(--border-subtle)',
-          }}
+          className="flex items-center gap-4 px-4 py-3 rounded-lg border w-full md:w-auto"
+          style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border-subtle)' }}
         >
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--fortress-steel)' }}>
-            Net Balance
-          </p>
-          <p 
-            className="text-2xl font-bold font-mono"
-            style={{ color: totalBalance >= 0 ? 'var(--field-green)' : 'var(--castle-red)' }}
-          >
-            {totalBalance >= 0 ? '+' : ''}${totalBalance.toFixed(2)}
-          </p>
+          <div className="flex flex-col pr-4 border-r" style={{ borderColor: 'var(--border-subtle)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--fortress-steel)' }}>Base Income</span>
+            <span className="text-lg font-bold font-mono" style={{ color: 'var(--text-primary)' }}>${shieldData.baseIncome.toLocaleString()}</span>
+          </div>
+          <div className="flex flex-col pr-4 border-r" style={{ borderColor: 'var(--border-subtle)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: 'var(--engine-navy)' }}>
+              <ShieldCheck className="w-3 h-3"/> Shielded
+            </span>
+            <span className="text-lg font-bold font-mono" style={{ color: 'var(--engine-navy)' }}>${shieldData.totalShielded.toLocaleString()}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--field-green)' }}>True Spendable</span>
+            <span className="text-lg font-bold font-mono" style={{ color: 'var(--field-green)' }}>${shieldData.totalSpendable.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
-      {/* ── Add Transaction ─────────────────────────────────────────────────── */}
-      <div>
+      {/* ── Add Transaction & Daily Tip ──────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-4">
         <Button
           onClick={onOpenAddTransaction}
           size="lg"
-          className="font-bold tracking-wide text-white"
+          className="font-bold tracking-wide text-white w-full sm:w-auto"
           style={{
             backgroundColor: 'var(--castle-red)',
             borderColor: 'var(--castle-red-dark)',
@@ -172,10 +184,10 @@ export function DashboardOverview({
           <Plus className="h-5 w-5 mr-2" />
           Log Transaction
         </Button>
+        <div className="flex-1">
+          <DailyTipCard />
+        </div>
       </div>
-
-      {/* ── Daily Tip ───────────────────────────────────────────────────────── */}
-      <DailyTipCard />
 
       {/* ── Summary Cards ───────────────────────────────────────────────────── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
