@@ -13,6 +13,8 @@ import {
 import { MoneyInput } from "./MoneyInput";
 import type { Transaction, Budget } from "../App";
 import { parseDateInput, formatDateForInput } from "../utils/dateUtils";
+import type { SavingsVault } from "../utils/shieldLogic";
+import { ShieldCheck, Zap } from "lucide-react";
 
 interface AddTransactionDialogProps {
   open: boolean;
@@ -21,6 +23,8 @@ interface AddTransactionDialogProps {
   onEditTransaction: (transaction: Omit<Transaction, "id">) => void;
   editingTransaction: Transaction | null;
   budgets: Budget[];
+  savingsBuckets?: SavingsVault[];
+  onUpdateVault?: (id: string, updates: Partial<SavingsVault>) => Promise<void>;
 }
 
 const labelStyle: React.CSSProperties = {
@@ -43,12 +47,16 @@ export function AddTransactionDialog({
   onEditTransaction,
   editingTransaction,
   budgets,
+  savingsBuckets = [],
+  onUpdateVault,
 }: AddTransactionDialogProps) {
   const [description, setDescription] = useState("");
   const [amount, setAmount]           = useState<number>(0);
   const [category, setCategory]       = useState("");
   const [type, setType]               = useState<"income" | "expense">("expense");
   const [date, setDate]               = useState(formatDateForInput(new Date()));
+  
+  const [allocations, setAllocations] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (editingTransaction) {
@@ -63,17 +71,50 @@ export function AddTransactionDialog({
       setCategory("");
       setType("expense");
       setDate(formatDateForInput(new Date()));
+      setAllocations({});
     }
   }, [editingTransaction, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAllocationChange = (vaultId: string, val: number) => {
+    setAllocations(prev => ({ ...prev, [vaultId]: val }));
+  };
+
+  // ─── THE AUTO-FILL ENGINE ────────────────────────────────────────────────
+  const handleAutoFill = () => {
+    let remainingDeposit = amount;
+    const newAllocs: Record<string, number> = {};
+
+    savingsBuckets.forEach(vault => {
+      // Find out how much room is left before hitting the ceiling (if one exists)
+      const spaceLeft = vault.ceilingAmount ? vault.ceilingAmount - vault.currentBalance : Infinity;
+      
+      // We want to fund the monthly target, but not exceed the ceiling
+      const idealAmount = Math.min(vault.monthlyTarget, spaceLeft);
+
+      if (idealAmount > 0 && remainingDeposit >= idealAmount) {
+        newAllocs[vault.id] = idealAmount;
+        remainingDeposit -= idealAmount;
+      } else if (idealAmount > 0 && remainingDeposit > 0) {
+        newAllocs[vault.id] = remainingDeposit;
+        remainingDeposit = 0;
+      }
+    });
+
+    setAllocations(newAllocs);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !amount || !category) return;
+    
+    // Auto-assign category if it is an income transaction
+    const finalCategory = type === "income" ? "Income" : category;
+    
+    if (!description || amount <= 0 || !finalCategory) return;
 
     const transactionData = {
       date: parseDateInput(date),
       description,
-      category,
+      category: finalCategory,
       amount,
       type,
     };
@@ -82,151 +123,265 @@ export function AddTransactionDialog({
       onEditTransaction(transactionData);
     } else {
       onAddTransaction(transactionData);
+      
+      if (type === "income" && onUpdateVault) {
+        for (const vaultId of Object.keys(allocations)) {
+          const addedAmount = allocations[vaultId];
+          if (addedAmount > 0) {
+            const targetVault = savingsBuckets.find(v => v.id === vaultId);
+            if (targetVault) {
+              const newBalance = targetVault.currentBalance + addedAmount;
+              await onUpdateVault(vaultId, { currentBalance: newBalance });
+            }
+          }
+        }
+      }
+
       setDescription("");
       setAmount(0);
       setCategory("");
+      setAllocations({});
     }
   };
 
   const uniqueCategories = Array.from(new Set([
     ...budgets.map(b => b.category),
-    "Income",
     "Other",
   ]));
+
+  const totalAllocated = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+  const isOverAllocated = totalAllocated > amount;
+  const toSpendable = Math.max(0, amount - totalAllocated);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px]"
-        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+        className="sm:max-w-[425px] flex flex-col p-0 gap-0"
+        style={{ 
+          backgroundColor: "var(--surface)", 
+          borderColor: "var(--border-subtle)",
+          maxHeight: "85vh",
+          overflow: "hidden" 
+        }}
       >
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle
-              className="text-lg font-bold tracking-tight"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {editingTransaction ? "Edit Transaction" : "Log Transaction"}
-            </DialogTitle>
-            <DialogDescription style={{ color: "var(--fortress-steel)" }}>
-              {editingTransaction
-                ? "Update the transaction details below."
-                : "Record a new income or expense entry."}
-            </DialogDescription>
-          </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          
+          <div className="px-6 pt-6 pb-2 shrink-0">
+            <DialogHeader>
+              <DialogTitle
+                className="text-lg font-bold tracking-tight"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {editingTransaction ? "Edit Transaction" : "Log Transaction"}
+              </DialogTitle>
+              <DialogDescription style={{ color: "var(--fortress-steel)" }}>
+                {editingTransaction
+                  ? "Update the transaction details below."
+                  : "Record a new income or expense entry."}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="grid gap-4 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="grid gap-4 pr-1">
+              
+              <div className="grid gap-1.5">
+                <Label htmlFor="type" style={labelStyle}>Type</Label>
+                <Select value={type} onValueChange={(v: "income" | "expense") => setType(v)}>
+                  <SelectTrigger
+                    id="type"
+                    style={{
+                      ...inputStyle,
+                      color: type === "income" ? "var(--field-green)" : "var(--castle-red)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
+                    <SelectItem value="expense">
+                      <span style={{ color: "var(--castle-red)", fontWeight: 600 }}>Expense</span>
+                    </SelectItem>
+                    <SelectItem value="income">
+                      <span style={{ color: "var(--field-green)", fontWeight: 600 }}>Income</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Date */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="date" style={labelStyle}>Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                required
-                style={{ ...inputStyle, fontFamily: "var(--font-mono)" }}
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="date" style={labelStyle}>Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    required
+                    style={{ ...inputStyle, fontFamily: "var(--font-mono)" }}
+                  />
+                </div>
 
-            {/* Description */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="description" style={labelStyle}>Description</Label>
-              <Input
-                id="description"
-                placeholder="Enter description"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                required
-                style={inputStyle}
-              />
-            </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="amount" style={labelStyle}>Amount</Label>
+                  <MoneyInput
+                    id="amount"
+                    value={amount}
+                    onChange={setAmount}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
 
-            {/* Category */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="category" style={labelStyle}>Category</Label>
-              <Select value={category} onValueChange={setCategory} required>
-                <SelectTrigger
-                  id="category"
-                  style={{
-                    ...inputStyle,
-                    color: category ? "var(--text-primary)" : "var(--text-muted)",
-                  }}
+              <div className="grid gap-1.5">
+                <Label htmlFor="description" style={labelStyle}>Description</Label>
+                <Input
+                  id="description"
+                  placeholder={type === "income" ? "e.g. Paycheck" : "e.g. Groceries"}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  required
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* ONLY show Category if it is an expense */}
+              {type === "expense" && (
+                <div className="grid gap-1.5">
+                  <Label htmlFor="category" style={labelStyle}>Category</Label>
+                  <Select value={category} onValueChange={setCategory} required>
+                    <SelectTrigger
+                      id="category"
+                      style={{
+                        ...inputStyle,
+                        color: category ? "var(--text-primary)" : "var(--text-muted)",
+                      }}
+                    >
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
+                      {uniqueCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* ── DYNAMIC VAULT ALLOCATION UI ── */}
+              {type === "income" && !editingTransaction && savingsBuckets.length > 0 && (
+                <div 
+                  className="mt-1 p-3 rounded-lg border space-y-3"
+                  style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
                 >
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
-                  {uniqueCategories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--engine-navy)" }}>
+                          <ShieldCheck className="w-3.5 h-3.5" /> Shield
+                        </h4>
+                        {amount > 0 && (
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleAutoFill}
+                            className="h-5 px-2 text-[9px] font-bold uppercase tracking-wider"
+                            style={{ backgroundColor: "rgba(27, 38, 59, 0.1)", color: "var(--engine-navy)" }}
+                          >
+                            <Zap className="w-3 h-3 mr-1" /> Auto-Fill
+                          </Button>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-mono font-bold" style={{ color: isOverAllocated ? "var(--castle-red)" : "var(--fortress-steel)"}}>
+                        ${totalAllocated.toFixed(2)} / ${amount.toFixed(2)}
+                      </span>
+                    </div>
 
-            {/* Type */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="type" style={labelStyle}>Type</Label>
-              <Select value={type} onValueChange={(v: "income" | "expense") => setType(v)}>
-                <SelectTrigger
-                  id="type"
-                  style={{
-                    ...inputStyle,
-                    color:      type === "income" ? "var(--field-green)" : "var(--castle-red)",
-                    fontWeight: 600,
-                  }}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
-                  <SelectItem value="expense">
-                    <span style={{ color: "var(--castle-red)", fontWeight: 600 }}>Expense</span>
-                  </SelectItem>
-                  <SelectItem value="income">
-                    <span style={{ color: "var(--field-green)", fontWeight: 600 }}>Income</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                    {totalAllocated === 0 && amount > 0 && (
+                      <p className="text-[10px] italic leading-tight" style={{ color: "var(--fortress-steel)" }}>
+                        * Allocating $0 bypasses the shield. 100% of this deposit will flow into your spendable budget.
+                      </p>
+                    )}
 
-            {/* Amount — MoneyInput handles $ alignment + blur formatting */}
-            <div className="grid gap-1.5">
-              <Label htmlFor="amount" style={labelStyle}>Amount</Label>
-              <MoneyInput
-                id="amount"
-                value={amount}
-                onChange={setAmount}
-                placeholder="0.00"
-                required
-              />
+                    {isOverAllocated && (
+                      <p className="text-[10px] font-bold leading-tight" style={{ color: "var(--castle-red)" }}>
+                        Warning: Allocated more than deposit amount.
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {savingsBuckets.map(vault => (
+                      <div key={vault.id} className="grid grid-cols-3 items-center gap-2">
+                        <div className="col-span-2 flex flex-col min-w-0 pr-2">
+                          <Label className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                            {vault.name}
+                          </Label>
+                          <span className="text-[10px] font-mono truncate" style={{ color: "var(--text-muted)" }}>
+                            Bal: ${vault.currentBalance.toLocaleString()} / ${vault.monthlyTarget}
+                          </span>
+                        </div>
+                        <div className="col-span-1">
+                          <MoneyInput
+                            value={allocations[vault.id] || 0}
+                            onChange={(val) => handleAllocationChange(vault.id, val)}
+                            className="h-8 text-xs text-right"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Spendable Readout */}
+                  {amount > 0 && (
+                    <div className="flex justify-between items-center pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--field-green)" }}>
+                        To Spendable
+                      </span>
+                      <span className="text-xs font-bold font-mono" style={{ color: "var(--field-green)" }}>
+                        +${toSpendable.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                </div>
+              )}
+
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              style={{
-                borderColor:     "var(--border-subtle)",
-                color:           "var(--fortress-steel)",
-                backgroundColor: "transparent",
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="font-bold tracking-wide text-white"
-              style={{
-                backgroundColor: "var(--castle-red)",
-                boxShadow:       "0 2px 0 0 var(--castle-red-dark)",
-                border:          "none",
-              }}
-            >
-              {editingTransaction ? "Update" : "Log"} Transaction
-            </Button>
-          </DialogFooter>
+          <div className="px-6 py-4 border-t shrink-0" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                style={{
+                  borderColor:     "var(--border-subtle)",
+                  color:           "var(--fortress-steel)",
+                  backgroundColor: "transparent",
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isOverAllocated}
+                className="font-bold tracking-wide text-white"
+                style={{
+                  backgroundColor: "var(--castle-red)",
+                  boxShadow:       "0 2px 0 0 var(--castle-red-dark)",
+                  border:          "none",
+                  opacity:         isOverAllocated ? 0.5 : 1,
+                }}
+              >
+                {editingTransaction ? "Update" : "Log"} Transaction
+              </Button>
+            </DialogFooter>
+          </div>
+
         </form>
       </DialogContent>
     </Dialog>

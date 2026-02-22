@@ -191,6 +191,7 @@ export default function App() {
       const batch = writeBatch(db);
       tSnaps.docs.forEach(d => batch.delete(d.ref));
       bSnaps.docs.forEach(d => batch.delete(d.ref));
+      sSnaps.docs.forEach(d => batch.delete(d.ref));
       batch.delete(doc(db, "userSettings", uid));
       await batch.commit();
       await deleteUser(user);
@@ -388,6 +389,7 @@ export default function App() {
                       <DashboardOverview 
                         budgets={currentBudgets} 
                         transactions={transactions} 
+                        savingsBuckets={savingsBuckets} // <-- PASSED TO DASHBOARD
                         onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                       />
                     </ErrorBoundary>
@@ -461,6 +463,8 @@ export default function App() {
                   onEditTransaction={(t) => { if (editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
                   editingTransaction={editingTransaction}
                   budgets={budgets}
+                  savingsBuckets={savingsBuckets} // <-- PASSED TO DIALOG
+                  onUpdateVault={updateVault}    // <-- PASSED TO DIALOG
                 />
               </>
             )
